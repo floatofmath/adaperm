@@ -1,0 +1,384 @@
+```{r libraries}
+library(flip)
+library(resamplingMCP)
+library(ggplot2)
+library(reshape2)
+library(plyr)
+library(dplyr)
+library(magrittr)
+```
+
+```{r t vs permutatio test}
+
+adaptive_ttest <- function(x){
+    n <- length(x)
+    n1 <- floor(n/2)
+    p1 <- t.test(x[1:n1],alternative='greater')$p.value
+    p2 <- t.test(x[(n1+1):n],alternative='greater')$p.value
+    {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE)
+}
+
+hetero_ttest <- function(x,s=2){
+    n <- length(x)
+    if(n %% s != 0) stop('Sample size has to be even')
+    n1 <- floor(n/s)
+    xs <- split(x,rep(1:s,each=n1))
+    ps <- sapply(lapply(xs,t.test,alternative='greater'),`[[`,'p.value')
+    {sqrt(n1/n) * qnorm(ps,lower=F)} %>% sum() %>% pnorm(lower=FALSE)
+}
+
+compare_tvsp <- function(n,B,alpha=.05,rdist=rnorm_hetero,...) {
+    out <- sapply(1:B,function(i,n=n,...) {
+        x <- rdist(n,...)
+        c(power_ttest = t.test(x,alternative='greater')$p.value,
+          power_ptest = flip(x,tail=1)@res$`p-value`,
+          power_atest = hetero_ttest(x,s=2))
+    },n=n,...)
+    rowMeans(out<=alpha)
+}
+
+plist <- lapply(seq(0,5,.25),function(ncp) c(ncp=ncp,compare_tvsp(20,5000,ncp=ncp,df=1)))
+
+power_comparison <- plist %>%
+    do.call(what='rbind') %>%
+        as.data.frame %>%
+            melt(id.vars="ncp",variable.name='test',value.name='power')
+
+do.call('rbind',plist)
+
+
+pdf("/tmp/permutation_vs_ttest_hetero.pdf",width=7,height=4)
+qplot(ncp,power,linetype=test,data=power_comparison,geom='line')
+dev.off()
+
+plist2 <- lapply(seq(0,2,.1),function(ncp) c(ncp=ncp,compare_tvsp(20,5000,rdist=rt,ncp=ncp,df=1)))
+
+power_comparison <- plist2 %>%
+    do.call(what='rbind') %>%
+        as.data.frame %>%
+            melt(id.vars="ncp",variable.name='test',value.name='power')
+
+pdf("/tmp/permutation_vs_ttest_tdist.pdf",width=7,height=4)
+qplot(ncp,power,linetype=test,data=power_comparison,geom='line')
+dev.off()
+
+plist3 <- lapply(seq(0,1,.05),function(ncp) c(ncp=ncp,compare_tvsp(20,5000,rdist=rnorm,mean=ncp)))
+
+power_comparison <- plist3 %>%
+    do.call(what='rbind') %>%
+        as.data.frame %>%
+            melt(id.vars="ncp",variable.name='test',value.name='power')
+
+pdf("/tmp/permutation_vs_ttest_norm.pdf",width=7,height=4)
+qplot(ncp,power,linetype=test,data=power_comparison,geom='line')
+dev.off()
+
+plist4 <- lapply(seq(0,1,.05),function(ncp) c(ncp=ncp,compare_tvsp(20,5000,ncp=ncp,df=4)))
+
+power_comparison <- plist4 %>%
+    do.call(what='rbind') %>%
+        as.data.frame %>%
+            melt(id.vars="ncp",variable.name='test',value.name='power')
+
+pdf("/tmp/permutation_vs_ttest_t4.pdf",width=7,height=4)
+qplot(ncp,power,linetype=test,data=power_comparison,geom='line')
+dev.off()
+
+library(parallel)
+options(mc.cores=3)
+plist5 <- mclapply(seq(0,3,.2),function(ncp) c(ncp=ncp,compare_tvsp(20,5000,rdist=rnorm_contaminated,mean=ncp,csigma=3)))
+
+power_comparison <- plist5 %>%
+    do.call(what='rbind') %>%
+        as.data.frame %>%
+            melt(id.vars="ncp",variable.name='test',value.name='power')
+
+pdf("/tmp/permutation_vs_ttest_normcont.pdf",width=7,height=4)
+ggplot(power_comparison)+geom_line(aes(ncp,power,linetype=test))
+dev.off()
+
+
+
+
+power_diff <- mutate(dcast(power_comparison,ncp~test),power_diff=power_ptest - power_ttest,power_rel=power_ptest/power_ttest-1)
+qplot(ncp,power_diff,data=power_diff,geom='line')
+
+out <- replicate(10000,adaptive_ttest(rt(10,df=1,ncp=1)))
+out2 <- replicate(10000,flip(rt(10,df=1,ncp=1),alternative=1)@res$`p-value`)
+out3 <- replicate(10000,hetero_ttest(rt(10,df=1,ncp=1),s=5))
+out4 <- replicate(10000,hetero_ttest(rt(10,df=1,ncp=1),s=5))
+out4 <- replicate(10000,hetero_ttest(rnorm(10,mean=0),s=5))
+out4 <- replicate(10000,hetero_ttest(rnorm(10,df=1,ncp=0),s=5))
+mean(out < .05)
+mean(out2 < .05)
+mean(out3 < .05)
+mean(out4 < .05)
+
+
+```
+
+
+## Simulations under the null
+
+### Randomization model
+
+We draw samples from a number of distributions, and compute the expected conditional error rate, taking the expectation over all possible first stage randomizations. We then compute the expceted expected conditional error rate and the maximum expected conditional error rate.
+
+```{r adaptive null}
+
+rdist <- rnorm
+MCMC  <- 100
+library(parallel)
+options(mc.cores=3)
+
+type1_randomization <- function(rdist,n1,n,MCMC,B=1000,...){
+    mclapply(1:MCMC,function(i){
+        x <- rdist(n,...)
+        g1 <- omega(rep(0:1,each=n1/2))
+        list(pCER = mean(apply(g1,2,function(g1) permutation_CER(x[1:n1],g1,x[(n1+1):n],B=B))),
+             normCER = mean(apply(g1,2,function(g1) normal_CER(x[1:n1],g1,n))),
+             tCER = mean(apply(g1,2,function(g1) t_CER(x[1:n1],g1,n))))}) %>%
+                 dplyr::bind_rows()
+}
+
+t1_norm_1 <- type1_randomization(rnorm,4,8,100)
+t1_rt1_1 <- type1_randomization(rt,4,8,100,df=1)
+t1_rt4_1 <- type1_randomization(rt,4,8,100,df=4)
+
+t1_norm_1$distribution  <- "Normal"
+t1_norm_1$sample_size  <- 8
+t1_rt1_1$distribution <- "Student-t, df=1"
+t1_rt1_1$sample_size <- 8
+t1_rt4_1$distribution <- "Student-t, df=4"
+t1_rt4_1$sample_size <- 8
+
+t1_norm_2 <- type1_randomization(rnorm,6,12,100)
+t1_rt1_2 <- type1_randomization(rt,6,12,100,df=1)
+t1_rt4_2 <- type1_randomization(rt,6,12,100,df=4)
+
+t1_norm_2$distribution  <- "Normal"
+t1_norm_2$sample_size  <- 12
+t1_rt1_2$distribution <- "Student-t, df=1"
+t1_rt1_2$sample_size <- 12
+t1_rt4_2$distribution <- "Student-t, df=4"
+t1_rt4_2$sample_size <- 12
+
+t1_norm_3 <- type1_randomization(rnorm,8,16,100,B=5000)
+t1_rt1_3 <- type1_randomization(rt,8,16,100,B=5000,df=1)
+t1_rt4_3 <- type1_randomization(rt,8,16,100,B=5000,df=4)
+
+t1_norm_3$distribution  <- "Normal"
+t1_norm_3$sample_size  <- 16
+t1_rt1_3$distribution <- "Student-t, df=1"
+t1_rt1_3$sample_size <- 16
+t1_rt4_3$distribution <- "Student-t, df=4"
+t1_rt4_3$sample_size <- 16
+
+t1_norm_4 <- type1_randomization(rnorm,50,100,100,B=5000)
+t1_rt1_4 <- type1_randomization(rt,50,100,100,B=5000,df=1)
+t1_rt4_4 <- type1_randomization(rt,50,100,100,B=5000,df=4)
+
+t1_norm_4$distribution  <- "Normal"
+t1_norm_4$sample_size  <- 100
+t1_rt1_4$distribution <- "Student-t, df=1"
+t1_rt1_4$sample_size <- 100
+t1_rt4_4$distribution <- "Student-t, df=4"
+t1_rt4_4$sample_size <- 100
+
+pdf('/tmp/box.pdf',width=8,height=5)
+par(mfrow=c(1,2))
+boxplot(t1_norm_2[,1:3])
+boxplot(t1_norm_3[,1:3])
+dev.off()
+
+t1_sims <- bind_rows(list(t1_norm_1,t1_norm_2,t1_norm_3,t1_norm_4,
+                          t1_rt1_1,t1_rt1_2,t1_rt1_3,t1_rt1_4,
+                          t1_rt4_1,t1_rt4_2,t1_rt4_3,t1_rt4_4))
+
+(t1_sims %>% melt(value.name="type_1",id.vars=c('distribution','sample_size'),variable.name="test") -> t1_sims_molten) %>% head
+
+levels(t1_sims_molten$test) <- c("Permutation","z-test","t-test")
+
+library(xtable)
+
+t1_sims_molten %>%
+    group_by(test,distribution,sample_size) %>%
+        summarise(mean=mean(type_1),sd=sd(type_1)) %>%
+            transmute(sample_size,type_1 = paste0("\"",round(mean,3)," (",round(sd,3),")\"")) %>%
+                dcast(distribution+sample_size~test) %>%
+                    xtable %>% print.xtable(include.rownames=FALSE)
+
+
+
+save(t1_sims,file="data/t1_sims_1711.rda")
+
+pdf('figures/t1_008.pdf')
+boxplot(t1_norm_1)
+dev.off()
+pdf('figures/t1_012.pdf')
+boxplot(t1_norm_2)
+dev.off()
+pdf('figures/t1_016.pdf')
+boxplot(t1_norm_3)
+dev.off()
+pdf('figures/t1_016.pdf')
+boxplot(t1_norm_4)
+dev.off()
+
+
+
+
+
+
+
+
+n1 <- 20
+n <- 40
+x <- rnorm(n)
+g1 <- rep(0:1,each=n1/2)
+system.time(cond_dist(x[1:n1],x[(n1+1):n],g1,g1,meandiff,100000))
+system.time(sort(perm_dist(x[1:n1],x[(n1+1):n],g1,g1,meandiff,100000))[ceiling(.975*36)])
+
+
+choose(4,2)^2
+
+## Small sample
+simulate_trials(1,4,8)
+simulate_trials(1,6,12)
+
+## Medium sample
+simulate_trials(1,20,40)
+simulate_trials(1,50,100)
+
+## Large sample
+simulate_trials(1,100,200)
+simulate_trials(1,200,400)
+
+```
+### Conditional first
+
+```{r adaptive null}
+## Small sample
+simulate_trials(1,4,8)
+simulate_trials(1,6,12)
+
+## Medium sample
+simulate_trials(1,20,40)
+simulate_trials(1,50,100)
+
+## Large sample
+simulate_trials(1,100,200)
+simulate_trials(1,200,400)
+
+```
+
+## Conditional none
+
+```{r adaptive null}
+## Small sample
+simulate_trials(1,4,8)
+simulate_trials(1,6,12)
+
+## Medium sample
+simulate_trials(1,20,40)
+simulate_trials(1,50,100)
+
+## Large sample
+simulate_trials(1,100,200)
+simulate_trials(1,200,400)
+
+```
+
+
+```{r simple example}
+x1 <- rnorm(12)/sqrt(2)
+x2 <- rnorm(12)/sqrt(2)
+g1 <- rep(0:1,each=6)
+g2 <- rep(0:1,each=6)
+x1 <- x1+g1
+tstat(x1,g1)
+
+z_test(x1,NULL,g1,NULL)
+t_test(x1,NULL,g1,NULL)
+
+o <- omega(g1,B=10)
+sumdiff(x1,o)
+meandiff(x1,o)
+zstat(c(x1,x2),c(g1,g2))
+tstat(c(x1,x2),c(g1,g2))
+tstat(c(x1,x2),c(g1,g2))
+
+
+normal_CER(x1,g1,length(x1)+length(x2))
+t_CER(x1,g1,length(x1)+length(x2),)
+boxplot(cbind(resamplingMCP:::perm_dist(x1,x2,g1,g2,meandiff,100),
+              resamplingMCP:::cond_dist(x1,x2,g1,g2,meandiff,100)))
+permutation_CER(x1,g1,x2,meandiff,B=10000)
+
+
+```
+
+```{r}
+library(resamplingMCP)
+library(parallel)
+MCMC = 1000
+B = 1000
+options(mc.cores=min(detectCores()-1,30))
+
+## Medium size trial
+n  <- 12
+n1 <- 6
+
+
+
+## Type 1 error of design where second stage is as preplanned
+## to run a 1 sample symulation, just
+T1_preplanned <- type1(rcauchy,n=n,n1=n1,B=B,MCMC=MCMC,stat=meandiff)
+colMeans(T1_preplanned)
+
+# colMeans(T1_preplanned)
+# ## Type 1 error of normal distribution CER
+# T1_normal <- type1_normal_preplanned(n,n1,MCMC)
+# colMeans(T1_normal)
+
+
+## Type 1 error of design where second stage is as preplanned
+# to run a 1 sample symulation, just
+T1_preplanned <- type1_preplanned(n,n1,B,MCMC,one_sample=TRUE)
+colMeans(T1_preplanned)
+# preplanned influenced     normal 
+# 0.00000000 0.00000000 0.02479908 
+
+
+## Type 1 error of normal distribution CER
+T1_normal <- type1_normal_preplanned(n,n1,MCMC,one_sample=TRUE)
+colMeans(T1_normal)
+# preplanned influenced 
+# 0.02669741 0.02669741 
+
+## Type 1 error of design where second stage is as preplanned, heteroscedastic errors
+
+T1_preplanned_hetero <- type1_preplanned_hetero(n,n1,B,MCMC,one_sample=TRUE)
+colMeans(T1_preplanned_hetero)
+# preplanned influenced     normal 
+# 0.0317010  0.0313780  0.3103739 
+
+
+## Type 1 error of normal distribution CER, heteroscedastic errors
+MCMC = 5000
+B = 5000
+T1_normal_hetero <- type1_normal_preplanned_hetero(n,n1,MCMC,B,one_sample=TRUE)
+colMeans(T1_normal_hetero) 
+# preplanned influenced 
+# 0.2367942  0.2367942 
+
+T1_tstat_hetero <- type1_tstat_hetero(n,n1,MCMC,one_sample=FALSE)
+colMeans(T1_tstat_hetero)
+
+# preplanned influenced 
+# 0.2367942  0.2367942 
+
+
+
+
+```

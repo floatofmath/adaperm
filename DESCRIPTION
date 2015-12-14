@@ -1,0 +1,14 @@
+Package: adaperm
+Title: Permutation tests for adaptive designs
+Version: 0.9
+Authors.R: "Florian Klinglmueller <float@lefant.net> [aut, cre]"
+Description: Resampling and permutation tests for adaptive designs
+Depends:
+    R (>= 3.1.2),
+    matrixStats
+Suggests:
+    testthat
+LinkingTo: Rcpp, RcppArmadillo
+License: MIT
+LazyData: true
+VignetteBuilder: knitr

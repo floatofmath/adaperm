@@ -1,0 +1,373 @@
+---
+title: "Simulation studies: Conditional permutation vs inverse normal combiantion tests"
+subtitle: "Continuous data"
+author: Florian Klinglmueller
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  \usepackage[utf8]{inputenc}
+---
+
+
+```{r}
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(pander)
+library(parallel)
+library(bt88.03.704)
+library(resamplingMCP)
+options(mc.cores=detectCores()-1)
+```
+
+```{r comparison function,echo=F}
+
+    
+
+##' Adaptive permutation test one-sample problems
+##'
+##' @title One-sample adaptive permutation test
+##' @template onesample_sims
+##' @param combination_function Function to combine stage-wise (permutation) p-values
+##' @param perms Maximum number of permutations to use when computing permutation p-values and conditional error rates
+##' @author Florian Klinglmueller
+##' @export
+adaptive_permtest2_os <- function(x,n1,n,ne,test_statistic,perms=50000,resam=100,alpha=0.025){
+    if(ne>n){
+        xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
+        gs <- split(sign(x)>0,rep(1:3,c(n1,n-n1,ne-n)))
+        A <- permutation_CER2(xs[[1]],gs[[1]],xs[[2]],xs[[3]],test_statistic,one_sample=TRUE,restricted=FALSE,
+                              permutations=perms,subsamples=resam,alpha=alpha)
+        q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,restricted=FALSE,B=perms)
+        return(A>=q)
+    } else {
+        xs <- split(x,rep(1:2,c(n1,ne-n1)))
+        gs <- split(sign(x)>0,rep(1:2,c(n1,ne-n1)))
+        return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,restricted=FALSE,B=perms))
+    }
+}
+
+
+compare_adaptive_tests <- function(n1,n,rule,rdist,test_statistic,mpfr=F,resam=100,perms=100,...){
+    x <- rdist(n,...)
+    ne <- rule(x[1:n1])
+    if(ne>n){
+        x <- c(x,rdist(ne-n,...))
+    } else {
+        ne <- n
+    }
+    list(ne = ne,
+         permtest = adaptive_permtest_os(x,n1,n,ne,test_statistic,perms=perms),
+         permtest2 = adaptive_permtest2_os(x,n1,n,ne,test_statistic,perms=perms,resam=resam),
+##         ttest = adaptive_ttest_os(x,n1,n,ne,mpfr=mpfr),
+         invnorm = adaptive_invnormtest_os(x,n1,n,ne))
+##         npcomb = adaptive_npcombtest_os(x,n1,n,ne,test_statistic))
+}
+
+run_simulation <- function(n1,n,mean,sd,B=10,resam=100,perms=100,...){
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(n1,n,cond_power_rule_norm,rnorm,diffmean,mean=mean,sd=sd,resam=resam,perms=perms,...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtest2=mean(permtest2),invnorm=mean(invnorm))#,npcomb=mean(npcomb),permtest=mean(permtest))
+}
+
+
+
+```
+
+
+## One-sample test procedures for adaptive designs
+
+The package `resamplingMCP` implements a number of test procedures
+that for adaptive designs the permit for a increase.
+
+- Adaptive permutation test
+- Adaptive non-parametric combination test
+- Adaptive combiniation test using inverse normal combination function 
+- Adaptive $t$-test
+
+
+```{r examples}
+n1 <- 6
+n <- 12
+ne <- 12
+x <- rnorm(ne,1)
+adaptive_permtest2_os(x,n1,n,ne,possum,resam=1000)
+
+c(adaptive_permtest_os(x,n1,n,ne,possum),
+  adaptive_permtest2_os(x,n1,n,ne,possum,resam=1000),
+  adaptive_ttest_os(x,n1,n,ne),
+  adaptive_invnormtest_os(x,n1,n,ne),
+  adaptive_npcombtest_os(x,n1,n,ne,possum))
+
+```
+## Some quick simulation studies
+
+
+```{r try comparison}
+list(
+## one example fixed rule
+compare_adaptive_tests(6,12,function(x) 3,rnorm,diffmean,mean=.5,resam=1000),
+## one example conditional power rule
+compare_adaptive_tests(6,12,cond_power_rule_norm,rnorm,diffmean,mean=.5,resam=1000),
+## one example conditional power rule
+compare_adaptive_tests(6,12,cond_power_rule_t,rnorm,diffmean,mean=.5,resam=1000)) %>% bind_rows
+```
+
+
+## Let's do all of this in a more systematic way
+
+
+### Small sample scenario
+
+We start with a preplanned sample size of twelve. Which provides $6$
+observations for each group. Such that we will start all trials with a
+first stage of size $6$ and second stage of at least $6$.
+
+### Normal distribution
+
+First let's have a look at the normal distribution. This is what both
+the adaptive $t$-test and the inverse normal combination (of
+$t$-tests) test assume.
+
+### Type 1 error 
+
+We look at a couple of parameter settings. First we consider scenarios
+under the null. The remaining parameters that are of most interest are
+preplanned sample size and the standard deviation of observations. The
+scenario is chosen such that if data were distributed with a mean of
+$\mu_0 = 1$ and standard deviation $\sigma_0 = 1$ a sample size of 12
+would give a power of roughly 88% for the one-sample $t$-test against
+a one-sided alternative (computed using R's function `power.t.test`).
+
+During the interim analysis the sample size for the second stage will
+be reassessed using a conditional power rule. That is, the variance is
+estimated using the observed first stage outcomes and the second stage
+sample size is increased to provide a conditional power of $90\%$
+using the standard normal sample size formula
+
+$$\left[\frac{\mu_0}{s(\boldsymbol{x}^F)} \left(\Phi^{-1}(1-\alpha) + \Phi^{-1}(1-\beta)\right)\right],$$
+
+where $s(\boldsymbol{x}^F)$ denotes the standard deviation estimated from the first
+stage observations, $\alpha$ is set to $0.025$ and $\beta = .1$.
+
+```{r test_simulation,eval=F,echo=F,results='hide'}
+scenarios <- expand.grid(n1=6,
+                         n=12,
+                         mean=1,
+                         sd=c(1.5),resam=c(100,1000,10000),perms=c(100,1000,10000))
+
+lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_simulation',c(scenarios[p,],B=1000)))) %>%
+    bind_rows ->
+    test_sim
+        
+test_sim
+system.time(sim <- run_simulation(6,12,1,1.5,1000,perms=10000,resam=50000))
+
+```
+
+
+### Under the alternative
+
+> We observed that the adaptive $t$-test does not control the Type I
+> error rate in any scenario. This is surprising as (unconditional -
+> finite sample) Type I error control of this method has been proven
+> theoretically and confirmed numerically. Implementation of the
+> approach however proved to be numerically challanging; especially
+> the conditional density of the sum of squares at the preplanned end
+> of the trial. It seems as if these problems are exacerbated in with
+> small samples. We will therefore contact the authors of the original
+> paper if they are aware of a better implementation. For the moment
+> we have removed the corresponding results. 
+
+We stick with the preplanned sample size of $n=12$ with a first stage
+of $n^F = 6$ and then look at the power of the different test
+procedures for mean values ranging from $0$ to $1.2$ in steps of
+$.3$ and a standard deviation of outcomes $\sigma \in \{1,1.5\}$.
+
+
+```{r sim_norm_alt,eval=F}
+scenarios  <- expand.grid(n1=6,
+                          n=12,
+                          mean = round(seq(0,1.2,.3),1),
+                          sd = c(1,1.5))
+
+lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_simulation',c(scenarios[p,],B=50000)))) %>%
+    bind_rows ->
+        sim_norm_alt
+
+save(sim_norm_alt,file=vfile("../data/sim_norm_alt",ending="rda"))
+```
+
+```{r}
+library(pander)
+load("../data/sim_norm_alt.rda")
+pander(sim_norm_alt,split.tables=100)
+```
+
+
+## In a larger sample
+
+So far we have only looked at scenarios with a fairly limited sample
+size. As it turns out the non-parametric combination test is not very
+usefull in such a situation which is due to the discreteness of the
+permutation distribution.
+
+We now look at simulated trials with slightly larger sample sizes. We
+set the preplanned sample size to $n = 100$ with a first stage of $n^F
+= 50$. We simulate under the null hypothesis for standard deviations
+of $2, 3, 9, 12$. 
+
+### Under the alternative
+
+Finally we end our investigation into the operating characteristics of
+adaptive tests under normality with a look at their performance under
+the alternative for a larger preplanned trial. Again we set the
+preplanned total sample size to $n=100$ with a first stage of $n^F =
+50$. Again we compare the power of the different test procedures for
+mean values ranging from $.1$ to $1$ in steps of $.1$. The standard
+deviation of outcomes is now fixed at $\sigma = 3$. This was chosen so
+that the preplanned trial (assuming $\mu_0=1$, $\sigma_0=3$) has a
+power of about $90%$ ($91%$ according to `power.t.test`).
+
+
+
+```{r,eval=F}
+scenarios <- expand.grid(n1=50,
+                         n=100,
+                         mean=round(seq(0,1.2,.3),2),
+                         sd=c(3,4))
+                         
+library(parallel)
+lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_simulation',c(scenarios[p,],B=1000)))) %>% bind_rows -> sim_norm_alt_ls
+
+save(sim_norm_null,file=vfile("../data/sim_norm_alt_ls"))
+
+
+```
+## Non-normal data
+
+```{r invnorm,eval=F,echo=F}
+run_simulation_cont <- function(n1,n,mean,sd,cshift,csd,cprop,B=10,resam=100,perms=100,...){
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(n1,n,cond_power_rule_norm,rnorm_cont,diffmean,mean=mean,sd=sd,cshift=cshift,csd=csd,cprop=cprop,resam=resam,perms=perms,...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtest2=mean(permtest2),invnorm=mean(invnorm))#,npcomb=mean(npcomb),permtest=mean(permtest))
+}
+
+scenarios <- expand.grid(n1=6,
+                         n=12,
+                         mean=round(seq(0,1.2,.3),2),
+                         sd=c(1,1.5),
+                         cshift = 0,
+                         csd = c(3,10),
+                         cprop = c(.1,.3),
+                         perms = 10000,
+                         resam = 10000)
+
+lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_simulation_cont',c(scenarios[p,],B=1000)))) %>%
+    bind_rows ->
+    sim_normcont
+
+save(sim_normcont,file=vfile("../data/sim_norm_cont"))
+
+```
+```{r invnorm_limit,eval=F,echo=F}
+
+cond_power_rule_norm_triple <- function(x1){
+    cond_power_rule_norm(x1,maxN=length(x1)*3)
+}
+
+run_simulation_cont_cap<- function(n1,n,mean,sd,cshift,csd,cprop,B=10,resam=100,perms=100,...){
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(n1,n,cond_power_rule_norm_triple,rnorm_cont,signedranks,mean=mean,sd=sd,cshift=cshift,csd=csd,cprop=cprop,resam=resam,perms=perms,...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtest2=mean(permtest2),invnorm=mean(invnorm))#,npcomb=mean(npcomb),permtest=mean(permtest))
+}
+
+scenarios <- expand.grid(n1=6,
+                         n=12,
+                         mean=round(seq(0,1.2,.3),2),
+                         sd=c(1,1.5),
+                         cshift = 0,
+                         csd = c(3,10),
+                         cprop = c(.1,.3),
+                         perms = 10000,
+                         resam = 10000)
+
+simAlt <- run_simulation_cont_cap(n1=6,n=12,mean=1,sd=1.2,cshift=0,csd=3,cprop=.1,B=1000,perms=1000,resam=1000)
+simNull <- run_simulation_cont_cap(n1=6,n=12,mean=0,sd=1.2,cshift=0,csd=3,cprop=.1,B=1000,perms=1000,resam=1000)
+
+lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_simulation_cont_cap',c(scenarios[p,],B=1000)))) %>%
+    bind_rows ->
+    sim_normcont_rk
+
+save(sim_normcont_rk,file=vfile("../data/sim_norm_cont_rk"))
+
+```
+
+```{r master_simulation,eval=F,echo=F}
+run_scenario <- function(B,...){
+    ## just a wrapper around mclapply2
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtest=mean(permtest),permtest2=mean(permtest2),invnorm=mean(invnorm))#,npcomb=mean(npcomb),permtest=mean(permtest))
+}
+
+run_simulation_general <- function(scenarios,B=100,...){
+    params <- list(...)
+    bind_rows(lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_scenario',c(B=B,scenarios[p,],params)))))
+}
+scenarios_test <- expand.grid(n1=50,
+                              n=100,
+                              mean=c(0,1),
+                              sd=c(3,5),
+                              perms = 500,
+                              resam = 500)
+
+quicktest <- run_simulation_general(scenarios_test,B=100,rule=cond_power_rule_norm,test_statistic=diffmean,rdist=rnorm)
+
+
+scenarios_normal_small <- expand.grid(n1=6,
+                                      n=12,
+                                      mean=round(seq(0,1,.5),2),
+                                      sd=c(1,1.2,1.5),
+                                      perms = 10000,
+                                      resam = 5000)
+
+sim_normal_small <- run_simulation_general(scenarios_normal_small,B=5000,rule=cond_power_rule_norm,test_statistic=diffmean,rdist=rnorm)
+save(scenarios_normal_small,file=vfile('~/repos/resamplingMCP/data/scenarios_normal_small'))
+
+
+
+scenarios_normal_large <- expand.grid(n1=50,
+                                      n=100,
+                                      mean=round(seq(0,1,.5),2),
+                                      sd=3:5,
+                                      perms = 10000,
+                                      resam = 5000)
+
+sim_normal_large <- run_simulation_general(scenarios_normal_large,B=5000,rule=cond_power_rule_norm,test_statistic=diffmean,rdist=rnorm)
+save(sim_normal_large,file=vfile("~/repos/resamplingMCP/data/sim_normal_large"))
+
+scenarios_nonnormal_large <- expand.grid(n1=50,
+                               n=100,
+                               mean=round(seq(0,1.2,.4),2),
+                               sd=3:5,
+                               cshift = 0,
+                               csd = c(10,30),
+                               cprop = c(.1,.3),
+                               perms = 10000,
+                               resam = 5000)
+
+sim_nonnormal_large <- run_simulation_general(scenarios_nonnormal_large,B=5000,rule=cond_power_rule_norm,test_statistic=diffmean,rdist=rnorm_cont)
+save(sim_nonnormal_large,file=vfile("~/repos/resamplingMCP/data/sim_nonnormal_large"))
+
+
+scenarios_nonnormal_small <- expand.grid(n1=6,
+                               n=12,
+                               ncp=round(seq(0,1,.5),2),
+                               df=c(1,2,3),
+                               perms = 10000,
+                               resam = 5000)
+
+cond_power_rule_norm_max <- function(x1) cond_power_rule_norm(x1,maxN=500)
+sim_nonnormal_small <- run_simulation_general(scenarios_nonnormal_small,B=5000,rule=cond_power_rule_norm_max,test_statistic=diffmean,rdist=rnorm_hetero)
+save(sim_nonnormal_small,file=vfile("~/repos/resamplingMCP/data/sim_nonnormal_small"))
+
+
+```
