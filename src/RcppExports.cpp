@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // diffmeanC
 NumericVector diffmeanC(NumericVector x, IntegerMatrix g);
-RcppExport SEXP resamplingMCP_diffmeanC(SEXP xSEXP, SEXP gSEXP) {
+RcppExport SEXP adaperm_diffmeanC(SEXP xSEXP, SEXP gSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -20,7 +20,7 @@ END_RCPP
 }
 // sumdiffC
 NumericVector sumdiffC(NumericVector x, IntegerMatrix g);
-RcppExport SEXP resamplingMCP_sumdiffC(SEXP xSEXP, SEXP gSEXP) {
+RcppExport SEXP adaperm_sumdiffC(SEXP xSEXP, SEXP gSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -32,7 +32,7 @@ END_RCPP
 }
 // meandiffC
 NumericVector meandiffC(NumericVector x, IntegerMatrix g);
-RcppExport SEXP resamplingMCP_meandiffC(SEXP xSEXP, SEXP gSEXP) {
+RcppExport SEXP adaperm_meandiffC(SEXP xSEXP, SEXP gSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -44,7 +44,7 @@ END_RCPP
 }
 // random_reassignments_cpp
 IntegerMatrix random_reassignments_cpp(const IntegerVector g, const int nperm);
-RcppExport SEXP resamplingMCP_random_reassignments_cpp(SEXP gSEXP, SEXP npermSEXP) {
+RcppExport SEXP adaperm_random_reassignments_cpp(SEXP gSEXP, SEXP npermSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -56,7 +56,7 @@ END_RCPP
 }
 // random_samples_cpp
 NumericMatrix random_samples_cpp(const NumericVector xs, const int k, const int nsam);
-RcppExport SEXP resamplingMCP_random_samples_cpp(SEXP xsSEXP, SEXP kSEXP, SEXP nsamSEXP) {
+RcppExport SEXP adaperm_random_samples_cpp(SEXP xsSEXP, SEXP kSEXP, SEXP nsamSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -69,7 +69,7 @@ END_RCPP
 }
 // combinations_cpp
 IntegerMatrix combinations_cpp(const int n, const int k);
-RcppExport SEXP resamplingMCP_combinations_cpp(SEXP nSEXP, SEXP kSEXP) {
+RcppExport SEXP adaperm_combinations_cpp(SEXP nSEXP, SEXP kSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -81,7 +81,7 @@ END_RCPP
 }
 // subsamples_cpp
 NumericMatrix subsamples_cpp(NumericVector xs, const int k);
-RcppExport SEXP resamplingMCP_subsamples_cpp(SEXP xsSEXP, SEXP kSEXP) {
+RcppExport SEXP adaperm_subsamples_cpp(SEXP xsSEXP, SEXP kSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -93,7 +93,7 @@ END_RCPP
 }
 // bincombinations_cpp
 IntegerMatrix bincombinations_cpp(const int p);
-RcppExport SEXP resamplingMCP_bincombinations_cpp(SEXP pSEXP) {
+RcppExport SEXP adaperm_bincombinations_cpp(SEXP pSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;

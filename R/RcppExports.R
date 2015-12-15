@@ -2,34 +2,34 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 diffmeanC <- function(x, g) {
-    .Call('resamplingMCP_diffmeanC', PACKAGE = 'resamplingMCP', x, g)
+    .Call('adaperm_diffmeanC', PACKAGE = 'adaperm', x, g)
 }
 
 sumdiffC <- function(x, g) {
-    .Call('resamplingMCP_sumdiffC', PACKAGE = 'resamplingMCP', x, g)
+    .Call('adaperm_sumdiffC', PACKAGE = 'adaperm', x, g)
 }
 
 meandiffC <- function(x, g) {
-    .Call('resamplingMCP_meandiffC', PACKAGE = 'resamplingMCP', x, g)
+    .Call('adaperm_meandiffC', PACKAGE = 'adaperm', x, g)
 }
 
 random_reassignments_cpp <- function(g, nperm = 1000L) {
-    .Call('resamplingMCP_random_reassignments_cpp', PACKAGE = 'resamplingMCP', g, nperm)
+    .Call('adaperm_random_reassignments_cpp', PACKAGE = 'adaperm', g, nperm)
 }
 
 random_samples_cpp <- function(xs, k, nsam = 1000L) {
-    .Call('resamplingMCP_random_samples_cpp', PACKAGE = 'resamplingMCP', xs, k, nsam)
+    .Call('adaperm_random_samples_cpp', PACKAGE = 'adaperm', xs, k, nsam)
 }
 
 combinations_cpp <- function(n, k) {
-    .Call('resamplingMCP_combinations_cpp', PACKAGE = 'resamplingMCP', n, k)
+    .Call('adaperm_combinations_cpp', PACKAGE = 'adaperm', n, k)
 }
 
 subsamples_cpp <- function(xs, k) {
-    .Call('resamplingMCP_subsamples_cpp', PACKAGE = 'resamplingMCP', xs, k)
+    .Call('adaperm_subsamples_cpp', PACKAGE = 'adaperm', xs, k)
 }
 
 bincombinations_cpp <- function(p) {
-    .Call('resamplingMCP_bincombinations_cpp', PACKAGE = 'resamplingMCP', p)
+    .Call('adaperm_bincombinations_cpp', PACKAGE = 'adaperm', p)
 }
 
