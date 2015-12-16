@@ -120,7 +120,7 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
   cdist <- cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   m <- length(dist)
   talpha <- min(dist[rank(dist,ties.method='min')>=ceiling((1-alpha)*m)])
-  cer1 <- mean(cdist>talpha)
+  cer1 <- mean(cdist>=talpha)
   ##    pvals <- unlist(lapply(cdist,function(x) sum(dist>=x)/B))
   ##    cer2 <- sum(pvals<=alpha)/B
   c(cer1)
@@ -194,5 +194,5 @@ cer <- function(x1,x2,g1,g2,stat,permutations,restricted,alpha,...){
     m <- length(dist)
     talpha <- min(dist[rank(dist,ties.method='min')>=ceiling((1-alpha)*m)])
     cdist <- cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
-    mean(cdist>talpha)
+    mean(cdist>=talpha)
 }
