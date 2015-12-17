@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="author" content="Florian Klinglmueller" />
+
+
+<title>Simulation studies: Conditional permutation vs inverse normal combiantion tests</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+
+
+<link href="data:text/css,body%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20max%2Dwidth%3A%20700px%3B%0A%20%20overflow%3A%20visible%3B%0A%20%20padding%2Dleft%3A%202em%3B%0A%20%20padding%2Dright%3A%202em%3B%0A%20%20font%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0A%20%20font%2Dsize%3A%2014px%3B%0A%20%20line%2Dheight%3A%201%2E35%3B%0A%7D%0A%0A%23header%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0A%0A%23TOC%20%7B%0A%20%20clear%3A%20both%3B%0A%20%20margin%3A%200%200%2010px%2010px%3B%0A%20%20padding%3A%204px%3B%0A%20%20width%3A%20400px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20border%2Dradius%3A%205px%3B%0A%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20font%2Dsize%3A%2013px%3B%0A%20%20line%2Dheight%3A%201%2E3%3B%0A%7D%0A%20%20%23TOC%20%2Etoctitle%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%20%20font%2Dsize%3A%2015px%3B%0A%20%20%20%20margin%2Dleft%3A%205px%3B%0A%20%20%7D%0A%0A%20%20%23TOC%20ul%20%7B%0A%20%20%20%20padding%2Dleft%3A%2040px%3B%0A%20%20%20%20margin%2Dleft%3A%20%2D1%2E5em%3B%0A%20%20%20%20margin%2Dtop%3A%205px%3B%0A%20%20%20%20margin%2Dbottom%3A%205px%3B%0A%20%20%7D%0A%20%20%23TOC%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dleft%3A%20%2D2em%3B%0A%20%20%7D%0A%20%20%23TOC%20li%20%7B%0A%20%20%20%20line%2Dheight%3A%2016px%3B%0A%20%20%7D%0A%0Atable%20%7B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dcolor%3A%20%23DDDDDD%3B%0A%20%20border%2Dstyle%3A%20outset%3B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0A%20%20border%2Dwidth%3A%202px%3B%0A%20%20padding%3A%205px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%20%20line%2Dheight%3A%2018px%3B%0A%20%20padding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0A%20%20border%2Dleft%2Dstyle%3A%20none%3B%0A%20%20border%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Ap%20%7B%0A%20%20margin%3A%200%2E5em%200%3B%0A%7D%0A%0Ablockquote%20%7B%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20padding%3A%200%2E25em%200%2E75em%3B%0A%7D%0A%0Ahr%20%7B%0A%20%20border%2Dstyle%3A%20solid%3B%0A%20%20border%3A%20none%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23777%3B%0A%20%20margin%3A%2028px%200%3B%0A%7D%0A%0Adl%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%20%20dl%20dd%20%7B%0A%20%20%20%20margin%2Dbottom%3A%2013px%3B%0A%20%20%20%20margin%2Dleft%3A%2013px%3B%0A%20%20%7D%0A%20%20dl%20dt%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%7D%0A%0Aul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%20%20ul%20li%20%7B%0A%20%20%20%20list%2Dstyle%3A%20circle%20outside%3B%0A%20%20%7D%0A%20%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dbottom%3A%200%3B%0A%20%20%7D%0A%0Apre%2C%20code%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20color%3A%20%23333%3B%0A%7D%0Apre%20%7B%0A%20%20white%2Dspace%3A%20pre%2Dwrap%3B%20%20%20%20%2F%2A%20Wrap%20long%20lines%20%2A%2F%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20margin%3A%205px%200px%2010px%200px%3B%0A%20%20padding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Acode%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0A%20%20padding%3A%202px%200px%3B%0A%7D%0A%0Adiv%2Efigure%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0A%20%20background%2Dcolor%3A%20%23FFFFFF%3B%0A%20%20padding%3A%202px%3B%0A%20%20border%3A%201px%20solid%20%23DDDDDD%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20margin%3A%200%205px%3B%0A%7D%0A%0Ah1%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20font%2Dsize%3A%2035px%3B%0A%20%20line%2Dheight%3A%2040px%3B%0A%7D%0A%0Ah2%20%7B%0A%20%20border%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20padding%2Dbottom%3A%202px%3B%0A%20%20font%2Dsize%3A%20145%25%3B%0A%7D%0A%0Ah3%20%7B%0A%20%20border%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20font%2Dsize%3A%20120%25%3B%0A%7D%0A%0Ah4%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0A%20%20margin%2Dleft%3A%208px%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Ah5%2C%20h6%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ccc%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Aa%20%7B%0A%20%20color%3A%20%230033dd%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%20%20a%3Ahover%20%7B%0A%20%20%20%20color%3A%20%236666ff%3B%20%7D%0A%20%20a%3Avisited%20%7B%0A%20%20%20%20color%3A%20%23800080%3B%20%7D%0A%20%20a%3Avisited%3Ahover%20%7B%0A%20%20%20%20color%3A%20%23BB00BB%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%0A%2F%2A%20Class%20described%20in%20https%3A%2F%2Fbenjeffrey%2Ecom%2Fposts%2Fpandoc%2Dsyntax%2Dhighlighting%2Dcss%0A%20%20%20Colours%20from%20https%3A%2F%2Fgist%2Egithub%2Ecom%2Frobsimmons%2F1172277%20%2A%2F%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Keyword%20%2A%2F%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%2F%2A%20DataType%20%2A%2F%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%2F%2A%20DecVal%20%28decimal%20values%29%20%2A%2F%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20BaseN%20%2A%2F%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Float%20%2A%2F%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Char%20%2A%2F%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20String%20%2A%2F%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%2F%2A%20Comment%20%2A%2F%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%2F%2A%20OtherToken%20%2A%2F%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20AlertToken%20%2A%2F%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Function%20calls%20%2A%2F%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%2F%2A%20ErrorTok%20%2A%2F%0A%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+<div id="header">
+<h1 class="title">Simulation studies: Conditional permutation vs inverse normal combiantion tests</h1>
+<h3 class="subtitle"><em>Continuous data</em></h3>
+<h4 class="author"><em>Florian Klinglmueller</em></h4>
+</div>
+
+
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(magrittr)
+<span class="kw">library</span>(plyr)
+<span class="kw">library</span>(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: 'dplyr'
+## 
+## The following objects are masked from 'package:plyr':
+## 
+##     arrange, count, desc, failwith, id, mutate, rename, summarise,
+##     summarize
+## 
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(pander)
+<span class="kw">library</span>(parallel)
+<span class="kw">library</span>(bt88<span class="fl">.03.704</span>)</code></pre>
+<pre><code>## Loading required package: data.table
+## 
+## Attaching package: 'data.table'
+## 
+## The following objects are masked from 'package:dplyr':
+## 
+##     between, last</code></pre>
+<pre><code>## Warning: replacing previous import by 'reshape2::melt' when loading
+## 'bt88.03.704'</code></pre>
+<pre><code>## Warning: replacing previous import by 'reshape2::dcast' when loading
+## 'bt88.03.704'</code></pre>
+<pre><code>## 
+## Attaching package: 'bt88.03.704'
+## 
+## The following object is masked from 'package:base':
+## 
+##     setwd</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(adaperm)</code></pre>
+<pre><code>## Loading required package: matrixStats
+## matrixStats v0.50.0 (2015-12-13) successfully loaded. See ?matrixStats for help.
+## 
+## Attaching package: 'matrixStats'
+## 
+## The following object is masked from 'package:dplyr':
+## 
+##     count
+## 
+## The following object is masked from 'package:plyr':
+## 
+##     count</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">options</span>(<span class="dt">mc.cores=</span><span class="kw">detectCores</span>()-<span class="dv">1</span>)</code></pre>
+<div id="one-sample-test-procedures-for-adaptive-designs" class="section level2">
+<h2>One-sample test procedures for adaptive designs</h2>
+<p>The package <code>resamplingMCP</code> implements a number of test procedures that for adaptive designs the permit for a increase.</p>
+<ul>
+<li>Adaptive permutation test</li>
+<li>Adaptive non-parametric combination test</li>
+<li>Adaptive combiniation test using inverse normal combination function</li>
+<li>Adaptive <span class="math">\(t\)</span>-test</li>
+</ul>
+<pre class="sourceCode r"><code class="sourceCode r">n1 &lt;-<span class="st"> </span><span class="dv">6</span>
+n &lt;-<span class="st"> </span><span class="dv">12</span>
+ne &lt;-<span class="st"> </span><span class="dv">12</span>
+x &lt;-<span class="st"> </span><span class="kw">rnorm</span>(ne,<span class="dv">1</span>)
+<span class="kw">adaptive_permtest2_os</span>(x,n1,n,ne,possum,<span class="dt">resam=</span><span class="dv">1000</span>)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">c</span>(<span class="kw">adaptive_permtest_os</span>(x,n1,n,ne,possum),
+  <span class="kw">adaptive_permtest2_os</span>(x,n1,n,ne,possum,<span class="dt">resam=</span><span class="dv">1000</span>),
+  <span class="kw">adaptive_ttest_os</span>(x,n1,n,ne),
+  <span class="kw">adaptive_invnormtest_os</span>(x,n1,n,ne),
+  <span class="kw">adaptive_npcombtest_os</span>(x,n1,n,ne,possum))</code></pre>
+<pre><code>## [1]  TRUE  TRUE  TRUE  TRUE FALSE</code></pre>
+</div>
+<div id="some-quick-simulation-studies" class="section level2">
+<h2>Some quick simulation studies</h2>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(
+## one example fixed rule
+<span class="kw">compare_adaptive_tests</span>(<span class="dv">6</span>,<span class="dv">12</span>,function(x) <span class="dv">3</span>,rnorm,diffmean,<span class="dt">mean=</span>.<span class="dv">5</span>,<span class="dt">resam=</span><span class="dv">1000</span>),
+## one example conditional power rule
+<span class="kw">compare_adaptive_tests</span>(<span class="dv">6</span>,<span class="dv">12</span>,cond_power_rule_norm,rnorm,diffmean,<span class="dt">mean=</span>.<span class="dv">5</span>,<span class="dt">resam=</span><span class="dv">1000</span>),
+## one example conditional power rule
+<span class="kw">compare_adaptive_tests</span>(<span class="dv">6</span>,<span class="dv">12</span>,cond_power_rule_t,rnorm,diffmean,<span class="dt">mean=</span>.<span class="dv">5</span>,<span class="dt">resam=</span><span class="dv">1000</span>)) %&gt;%<span class="st"> </span>bind_rows</code></pre>
+<pre><code>## Source: local data frame [3 x 4]
+## 
+##      ne permtest permtest2 invnorm
+##   (dbl)    (lgl)     (lgl)   (lgl)
+## 1    12    FALSE      TRUE   FALSE
+## 2    12    FALSE     FALSE   FALSE
+## 3    12     TRUE      TRUE    TRUE</code></pre>
+</div>
+<div id="lets-do-all-of-this-in-a-more-systematic-way" class="section level2">
+<h2>Let’s do all of this in a more systematic way</h2>
+<div id="small-sample-scenario" class="section level3">
+<h3>Small sample scenario</h3>
+<p>We start with a preplanned sample size of twelve. Which provides <span class="math">\(6\)</span> observations for each group. Such that we will start all trials with a first stage of size <span class="math">\(6\)</span> and second stage of at least <span class="math">\(6\)</span>.</p>
+</div>
+<div id="normal-distribution" class="section level3">
+<h3>Normal distribution</h3>
+<p>First let’s have a look at the normal distribution. This is what both the adaptive <span class="math">\(t\)</span>-test and the inverse normal combination (of <span class="math">\(t\)</span>-tests) test assume.</p>
+</div>
+<div id="type-1-error" class="section level3">
+<h3>Type 1 error</h3>
+<p>We look at a couple of parameter settings. First we consider scenarios under the null. The remaining parameters that are of most interest are preplanned sample size and the standard deviation of observations. The scenario is chosen such that if data were distributed with a mean of <span class="math">\(\mu_0 = 1\)</span> and standard deviation <span class="math">\(\sigma_0 = 1\)</span> a sample size of 12 would give a power of roughly 88% for the one-sample <span class="math">\(t\)</span>-test against a one-sided alternative (computed using R’s function <code>power.t.test</code>).</p>
+<p>During the interim analysis the sample size for the second stage will be reassessed using a conditional power rule. That is, the variance is estimated using the observed first stage outcomes and the second stage sample size is increased to provide a conditional power of <span class="math">\(90\%\)</span> using the standard normal sample size formula</p>
+<p><span class="math">\[\left[\frac{\mu_0}{s(\boldsymbol{x}^F)} \left(\Phi^{-1}(1-\alpha) + \Phi^{-1}(1-\beta)\right)\right],\]</span></p>
+<p>where <span class="math">\(s(\boldsymbol{x}^F)\)</span> denotes the standard deviation estimated from the first stage observations, <span class="math">\(\alpha\)</span> is set to <span class="math">\(0.025\)</span> and <span class="math">\(\beta = .1\)</span>.</p>
+</div>
+<div id="under-the-alternative" class="section level3">
+<h3>Under the alternative</h3>
+<blockquote>
+<p>We observed that the adaptive <span class="math">\(t\)</span>-test does not control the Type I error rate in any scenario. This is surprising as (unconditional - finite sample) Type I error control of this method has been proven theoretically and confirmed numerically. Implementation of the approach however proved to be numerically challanging; especially the conditional density of the sum of squares at the preplanned end of the trial. It seems as if these problems are exacerbated in with small samples. We will therefore contact the authors of the original paper if they are aware of a better implementation. For the moment we have removed the corresponding results.</p>
+</blockquote>
+<p>We stick with the preplanned sample size of <span class="math">\(n=12\)</span> with a first stage of <span class="math">\(n^F = 6\)</span> and then look at the power of the different test procedures for mean values ranging from <span class="math">\(0\)</span> to <span class="math">\(1.2\)</span> in steps of <span class="math">\(.3\)</span> and a standard deviation of outcomes <span class="math">\(\sigma \in \{1,1.5\}\)</span>.</p>
+<pre class="sourceCode r"><code class="sourceCode r">scenarios  &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(<span class="dt">n1=</span><span class="dv">6</span>,
+                          <span class="dt">n=</span><span class="dv">12</span>,
+                          <span class="dt">mean =</span> <span class="kw">round</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="fl">1.2</span>,.<span class="dv">3</span>),<span class="dv">1</span>),
+                          <span class="dt">sd =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="fl">1.5</span>))
+
+<span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">nrow</span>(scenarios),function(p) <span class="kw">c</span>(scenarios[p,],<span class="kw">do.call</span>(<span class="st">'run_simulation'</span>,<span class="kw">c</span>(scenarios[p,],<span class="dt">B=</span><span class="dv">50000</span>)))) %&gt;%
+<span class="st">    </span>bind_rows -&gt;
+<span class="st">        </span>sim_norm_alt
+
+<span class="kw">save</span>(sim_norm_alt,<span class="dt">file=</span><span class="kw">vfile</span>(<span class="st">&quot;../data/sim_norm_alt&quot;</span>,<span class="dt">ending=</span><span class="st">&quot;rda&quot;</span>))</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(pander)
+<span class="kw">load</span>(<span class="st">&quot;../data/sim_norm_alt.rda&quot;</span>)
+<span class="kw">pander</span>(sim_norm_alt,<span class="dt">split.tables=</span><span class="dv">100</span>)</code></pre>
+<table>
+<colgroup>
+<col width="6%"></col>
+<col width="4%"></col>
+<col width="8%"></col>
+<col width="6%"></col>
+<col width="11%"></col>
+<col width="9%"></col>
+<col width="13%"></col>
+<col width="14%"></col>
+<col width="12%"></col>
+<col width="12%"></col>
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">n1</th>
+<th align="center">n</th>
+<th align="center">mean</th>
+<th align="center">sd</th>
+<th align="center">ASN</th>
+<th align="center">maxSN</th>
+<th align="center">permtest</th>
+<th align="center">permtest2</th>
+<th align="center">invnorm</th>
+<th align="center">npcomb</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.0</td>
+<td align="center">1.0</td>
+<td align="center">14.18912</td>
+<td align="center">56</td>
+<td align="center">0.02480</td>
+<td align="center">0.02572</td>
+<td align="center">0.02550</td>
+<td align="center">0.00230</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.3</td>
+<td align="center">1.0</td>
+<td align="center">14.17754</td>
+<td align="center">81</td>
+<td align="center">0.16686</td>
+<td align="center">0.17544</td>
+<td align="center">0.17074</td>
+<td align="center">0.03306</td>
+</tr>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.6</td>
+<td align="center">1.0</td>
+<td align="center">14.15364</td>
+<td align="center">62</td>
+<td align="center">0.51104</td>
+<td align="center">0.53636</td>
+<td align="center">0.52474</td>
+<td align="center">0.12348</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.9</td>
+<td align="center">1.0</td>
+<td align="center">14.14432</td>
+<td align="center">60</td>
+<td align="center">0.84666</td>
+<td align="center">0.86568</td>
+<td align="center">0.85580</td>
+<td align="center">0.19276</td>
+</tr>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">1.2</td>
+<td align="center">1.0</td>
+<td align="center">14.16600</td>
+<td align="center">65</td>
+<td align="center">0.97666</td>
+<td align="center">0.98084</td>
+<td align="center">0.97798</td>
+<td align="center">0.20930</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.0</td>
+<td align="center">1.5</td>
+<td align="center">25.04980</td>
+<td align="center">151</td>
+<td align="center">0.02452</td>
+<td align="center">0.02816</td>
+<td align="center">0.02426</td>
+<td align="center">0.01094</td>
+</tr>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.3</td>
+<td align="center">1.5</td>
+<td align="center">24.90542</td>
+<td align="center">165</td>
+<td align="center">0.12482</td>
+<td align="center">0.15022</td>
+<td align="center">0.13814</td>
+<td align="center">0.09292</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.6</td>
+<td align="center">1.5</td>
+<td align="center">24.96946</td>
+<td align="center">143</td>
+<td align="center">0.35748</td>
+<td align="center">0.43494</td>
+<td align="center">0.42520</td>
+<td align="center">0.31150</td>
+</tr>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">0.9</td>
+<td align="center">1.5</td>
+<td align="center">25.02022</td>
+<td align="center">132</td>
+<td align="center">0.64836</td>
+<td align="center">0.74644</td>
+<td align="center">0.73818</td>
+<td align="center">0.53756</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">12</td>
+<td align="center">1.2</td>
+<td align="center">1.5</td>
+<td align="center">25.11766</td>
+<td align="center">149</td>
+<td align="center">0.84968</td>
+<td align="center">0.91244</td>
+<td align="center">0.91148</td>
+<td align="center">0.64588</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="in-a-larger-sample" class="section level2">
+<h2>In a larger sample</h2>
+<p>So far we have only looked at scenarios with a fairly limited sample size. As it turns out the non-parametric combination test is not very usefull in such a situation which is due to the discreteness of the permutation distribution.</p>
+<p>We now look at simulated trials with slightly larger sample sizes. We set the preplanned sample size to <span class="math">\(n = 100\)</span> with a first stage of <span class="math">\(n^F = 50\)</span>. We simulate under the null hypothesis for standard deviations of <span class="math">\(2, 3, 9, 12\)</span>.</p>
+<div id="under-the-alternative-1" class="section level3">
+<h3>Under the alternative</h3>
+<p>Finally we end our investigation into the operating characteristics of adaptive tests under normality with a look at their performance under the alternative for a larger preplanned trial. Again we set the preplanned total sample size to <span class="math">\(n=100\)</span> with a first stage of <span class="math">\(n^F = 50\)</span>. Again we compare the power of the different test procedures for mean values ranging from <span class="math">\(.1\)</span> to <span class="math">\(1\)</span> in steps of <span class="math">\(.1\)</span>. The standard deviation of outcomes is now fixed at <span class="math">\(\sigma = 3\)</span>. This was chosen so that the preplanned trial (assuming <span class="math">\(\mu_0=1\)</span>, <span class="math">\(\sigma_0=3\)</span>) has a power of about <span class="math">\(90%\)</span> (<span class="math">\(91%\)</span> according to <code>power.t.test</code>).</p>
+<pre class="sourceCode r"><code class="sourceCode r">scenarios &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(<span class="dt">n1=</span><span class="dv">50</span>,
+                         <span class="dt">n=</span><span class="dv">100</span>,
+                         <span class="dt">mean=</span><span class="kw">round</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="fl">1.2</span>,.<span class="dv">3</span>),<span class="dv">2</span>),
+                         <span class="dt">sd=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">4</span>))
+                         
+<span class="kw">library</span>(parallel)
+<span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">nrow</span>(scenarios),function(p) <span class="kw">c</span>(scenarios[p,],<span class="kw">do.call</span>(<span class="st">'run_simulation'</span>,<span class="kw">c</span>(scenarios[p,],<span class="dt">B=</span><span class="dv">1000</span>)))) %&gt;%<span class="st"> </span>bind_rows -&gt;<span class="st"> </span>sim_norm_alt_ls
+
+<span class="kw">save</span>(sim_norm_null,<span class="dt">file=</span><span class="kw">vfile</span>(<span class="st">&quot;../data/sim_norm_alt_ls&quot;</span>))</code></pre>
+</div>
+</div>
+<div id="non-normal-data" class="section level2">
+<h2>Non-normal data</h2>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
