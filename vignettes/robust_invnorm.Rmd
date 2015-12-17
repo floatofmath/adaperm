@@ -172,3 +172,22 @@ r2[r2 %in% r1*10] <- r2[r2 %in% r1*10]+1
 r2 <- rank(c(r2,r1*10))[1:10]
 
 ```
+
+
+## Why is the inverse normal test better when the second stage is
+   large?
+
+```{r}
+B=1000
+n=200
+data <- matrix(rnorm_cont(B*n,mean=0.2,sd=2,cshift=0,csd=3),nrow=n)
+
+G <- expand.grid(i=1:B,n2=30:100)
+
+mclapply2(1:nrow(G),function(j) list(n1=G[j,'n2'],permtest=adaptive_permtest_os(data[,G[j,'i']],15,30,G[j,'n2'],signedranks,perms=100)),mc.progress=T) %>% bind_rows%>% group_by(n1) %>% summarize(power=mean(permtest))
+
+mclapply2(1:nrow(G),function(j) c(G[j,'n1'],permtest=adaptive_invnorm_wilcoxtest_os(data[,G[j,'n1']],15,30,G[j,'n2'],signedranks,perms=1000)),mc.progress=T) %>% bind_rows %>% group_by(n1) %>% summarize(power=mean(permtest))
+
+
+
+```
