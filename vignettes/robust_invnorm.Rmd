@@ -111,7 +111,7 @@ provide improvements in power.
 
 ```{r subsampling,eval=F}
 c(subsWM = mclapply2(1:B,function(i) adaptive_permtest2_os(data[,i],15,30,40,signedranks,perms=10000),mc.progress=F) %>% unlist %>% mean,
-  subsWs = mclapply2(1:B,function(i) adaptive_permtest2_os(data[,i],10,20,40,signedranks,perms=10000),mc.progress=F) %>% unlist %>% mean) -> subsampling
+  subsWs = mclapply2(1:B,function(i) adaptive_permtest2_os(data[,i],10,20,40,signedranks,perms=10000,resam=1000),mc.progress=F) %>% unlist %>% mean) -> subsampling
 save(subsampling,file="subsampling.rda")
 ```
 
@@ -119,6 +119,25 @@ save(subsampling,file="subsampling.rda")
 load("~/repos/adaperm/vignettes/subsampling.rda")
 pander(subsampling)
 ```
+
+
+------------------------------------------------------------
+ permW   permT   apermW   apermT   invnorm   ttest   wilcox 
+------- ------- -------- -------- --------- ------- --------
+ 0.852   0.82    0.854    0.823     0.817    0.819   0.856  
+------------------------------------------------------------
+
+---------------------------------------------------------
+ invnormM   permTM   permWM   invnormS   permTS   permWs 
+---------- -------- -------- ---------- -------- --------
+  0.816     0.818     0.83     0.802     0.773     0.8   
+---------------------------------------------------------
+
+-----------------
+ subsWM   subsWs 
+-------- --------
+ 0.831    0.805 
+-----------------
 
 
 The subsampling approach may be further improved using a

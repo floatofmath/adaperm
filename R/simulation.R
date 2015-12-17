@@ -48,12 +48,26 @@ adaptive_ttest_os <- function(x,n1,n,ne,alpha=0.025,mpfr=FALSE) {
 ##' @template onesample_sims
 ##' @author Florian Klinglmueller
 ##' @export
-adaptive_invnormtest_os <- function(x,n1,n,ne,alpha=0.025){
+adaptive_invnorm_ttest_os <- function(x,n1,n,ne,alpha=0.025){
     xs <- split(x,rep(1:2,c(n1,ne-n1)))
     p1 <- t.test(xs[[1]],alternative='greater')$p.value
     p2 <- t.test(xs[[2]],alternative='greater')$p.value
     pnorm(sum(sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)),lower=FALSE) <= alpha 
 }
+
+##' Adaptive combination test of stage-wise t-tests using the inverse normal combination function. 
+##'
+##' @title Inverse normal adaptive wilcoxon test
+##' @template onesample_sims
+##' @author Florian Klinglmueller
+##' @export
+adaptive_invnorm_wilcoxtest_os <- function(x,n1,n,ne,alpha=0.025){
+    xs <- split(x,rep(1:2,c(n1,ne-n1)))
+    p1 <- wilcox.test(xs[[1]],alternative='greater')$p.value
+    p2 <- wilcox.test(xs[[2]],alternative='greater')$p.value
+    pnorm(sum(sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)),lower=FALSE) <= alpha 
+}
+
 
 ##' Non-parametric combination of stage-wise test statistics. Combines stage-wise permutation p-values using some combination function; performs the test using the joint conditional permutation distribution of stage wise permutation p-values.
 ##'
@@ -111,6 +125,29 @@ adaptive_permtest_2s <- function(x,y,n1,n,ne,m1,m,me,test_statistic,perms=50000,
     A <- permutation_CER(xs[[1]],gs[[1]],xs[[2]],test_statistic,permutations=perms,alpha=alpha)
     q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms)
     A>=q
+}
+
+##' Adaptive permutation test one-sample problems
+##'
+##' @title One-sample adaptive permutation test
+##' @template onesample_sims
+##' @param combination_function Function to combine stage-wise (permutation) p-values
+##' @param perms Maximum number of permutations to use when computing permutation p-values and conditional error rates
+##' @author Florian Klinglmueller
+##' @export
+adaptive_permtest2_os <- function(x,n1,n,ne,test_statistic,perms=50000,resam=100,alpha=0.025){
+    if(ne>n){
+        xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
+        gs <- split(sign(x)>0,rep(1:3,c(n1,n-n1,ne-n)))
+        A <- permutation_CER2(xs[[1]],gs[[1]],xs[[2]],xs[[3]],test_statistic,one_sample=TRUE,restricted=FALSE,
+                              permutations=perms,subsamples=resam,alpha=alpha)
+        q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,restricted=FALSE,B=perms)
+        return(A>=q)
+    } else {
+        xs <- split(x,rep(1:2,c(n1,ne-n1)))
+        gs <- split(sign(x)>0,rep(1:2,c(n1,ne-n1)))
+        return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,restricted=FALSE,B=perms))
+    }
 }
 
 
