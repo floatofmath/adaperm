@@ -178,16 +178,55 @@ r2 <- rank(c(r2,r1*10))[1:10]
    large?
 
 ```{r}
+
+
+
+
+compare_adaptive_tests <- function(i,n1=15,n=30,ne,rdist,permutations=100){
+    x <- data[1:ne,i]
+    list(ne = ne,
+         permtestT = adaptive_permtest_os(x,n1,n,ne,diffmean,perms=permutations),
+         invnormT = adaptive_invnorm_ttest_os(x,n1,n,ne),
+         permtestW = adaptive_permtest_os(x,n1,n,ne,signedranks,perms=permutations),
+         invnormW = adaptive_invnorm_wilcoxtest_os(x,n1,n,ne))
+}
+
+
+
+
+## mclapply2(1:nrow(G),function(j) list(n1=G[j,'n2'],permtest=adaptive_permtest_os(data[,G[j,'i']],15,30,G[j,'n2'],signedranks,perms=100)),mc.progress=T) %>% bind_rows%>% group_by(n1) %>% summarize(power=mean(permtest))
+
+## mclapply2(1:nrow(G),function(j) c(G[j,'n1'],permtest=adaptive_invnorm_wilcoxtest_os(data[,G[j,'n1']],15,30,G[j,'n2'],signedranks,perms=1000)),mc.progress=T) %>% bind_rows %>% group_by(n1) %>% summarize(power=mean(permtest))
+
+
+
+
+
+run_scenario <- function(B,...){
+    ## just a wrapper around mclapply2
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(i,...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtestT=mean(permtestT),invnormT=mean(invnormT),permtestW=mean(permtestW),invnormW=mean(invnormW))
+}
+
+run_simulation_general <- function(scenarios,B=100,...){
+    params <- list(...)
+    bind_rows(lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_scenario',c(B=B,scenarios[p,],params)))))
+}
+
 B=1000
 n=200
-data <- matrix(rnorm_cont(B*n,mean=0.2,sd=2,cshift=0,csd=3),nrow=n)
+data <- matrix(rnorm_cont(B*n,mean=0.8,sd=2,cshift=0,csd=3),nrow=n)
 
-G <- expand.grid(i=1:B,n2=30:100)
+## small preplanned trial
+Gs <- expand.grid(ne=seq(10,100,10),n1=5,n=10,permutations=10000)
+## medium preplanned trial
+Gm <- expand.grid(ne=seq(30,100,10),n1=15,n=30,permutations=10000)
+## large preplanned trial
+Gl <- expand.grid(ne=seq(60,100,5),n1=30,n=60,permutations=10000)
 
-mclapply2(1:nrow(G),function(j) list(n1=G[j,'n2'],permtest=adaptive_permtest_os(data[,G[j,'i']],15,30,G[j,'n2'],signedranks,perms=100)),mc.progress=T) %>% bind_rows%>% group_by(n1) %>% summarize(power=mean(permtest))
+G <- rbind(Gs,Gm,Gl)
+power_second_stage <- run_simulation_general(G,B=1000)
 
-mclapply2(1:nrow(G),function(j) c(G[j,'n1'],permtest=adaptive_invnorm_wilcoxtest_os(data[,G[j,'n1']],15,30,G[j,'n2'],signedranks,perms=1000)),mc.progress=T) %>% bind_rows %>% group_by(n1) %>% summarize(power=mean(permtest))
-
-
+save(power_second_stage,file=vfile('power_second_stage'))
 
 ```
