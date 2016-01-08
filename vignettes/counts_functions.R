@@ -56,8 +56,8 @@ adaptive_permtest2_2s <- function(x,y,n1,n,ne,test_statistic,
 adaptive_invnormtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
   xs <- split(x,rep(1:2,c(n1,ne-n1)))
   ys <- split(y,rep(1:2,c(m1,ne-m1)))
-  p1 <- t.test(xs[[1]],ys[[1]],alternative='greater')$p.value
-  p2 <- t.test(xs[[2]],ys[[2]],alternative='greater')$p.value
+  p1 <- t.test(xs[[1]],ys[[1]],alternative='less')$p.value
+  p2 <- t.test(xs[[2]],ys[[2]],alternative='less')$p.value
   alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
 }
 
@@ -68,9 +68,9 @@ adaptive_invnormtest_negbin_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.0
   sg1 <- summary(glm.nb(c(xs[[1]],ys[[1]])~rep(0:1,c(n1,m1))))
   sg2 <- summary(glm.nb(c(xs[[2]],ys[[2]])~rep(0:1,c(ne-n1,ne-m1))))
   p1 <- sg1$coefficients[2,"Pr(>|z|)"]
-  s1 <- sg1$coefficients[2,"z value"]<0
+  s1 <- sg1$coefficients[2,"z value"]>0
   p2 <- sg2$coefficients[2,"Pr(>|z|)"]
-  s2 <- sg2$coefficients[2,"z value"]<0
+  s2 <- sg2$coefficients[2,"z value"]>0
   p1 <- ifelse(s1,p1/2,1-p1/2)
   p2 <- ifelse(s2,p2/2,1-p2/2)
   alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
@@ -100,19 +100,21 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
   x <- do.call(match.fun(rdist),c(n=n,control_opts))
   y <- do.call(match.fun(rdist),c(n=n,treatment_opts))
   nes <- rule(x[1:n1],y[1:m1])
+  print(nes)
   if(nes[1]>n){
     ne <- nes[1]
-    x <- c(x,rdist(ne[1]-n,...))
+    x <- c(x,do.call(match.fun(rdist),c(n=nes[1]-n,control_opts)))
   } else {
     ne <- n
   }
   if(nes[2]>m){
     me <- nes[2]
-    y <- c(x,rdist(ne[2]-m,...))
+    y <- c(y,do.call(match.fun(rdist),c(n=nes[2]-n,treatment_opts)))
   } else {
     me <- m
   }
-  list(permtest = adaptive_permtest_2s(x,y,n1,n,ne,test_statistic,m1,m,me),
+  list(ne = ne,
+       permtest = adaptive_permtest_2s(x,y,n1,n,ne,test_statistic,m1,m,me),
        permtest2 = adaptive_permtest2_2s(x,y,n1,n,ne,test_statistic,m1,m,me,resam=resam),
        invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
        invnorm_nb=adaptive_invnormtest_negbin_2s(x,y,n1,n,ne,m1,m,me),
@@ -136,13 +138,14 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
 
 
 samplesize_counts <- function(theta,lambda,k=1,t=1,alpha=0.025,beta=0.1){
-  ## see friede and schmiedli 2010 (StatMed)
-  nc <- (1+k*theta)^2 * (qnorm(alpha,lower=F)+qnorm(beta,lower=F))^2 / (t*lambda*(k+1)*theta*log(theta)^2)
+  ## see Schneider + schmiedli + friede 2013 (biometrical journal)
+  ## n 0 = (z 1−β + z 1−α ) ^2 /   log(θ ∗ ) ^2 *(1 + kθ ∗)  /θ ∗ k/tλ ∗ 0
+  nc <-(qnorm(alpha,lower=F)+qnorm(beta,lower=F))^2 *(1+k*theta) / (t*lambda*k*theta*log(theta)^2)
   return(ceiling(c(nc=nc,nt=k*nc)))
 }
 
 condpowerrule_counts <- function(x,y,theta=1.5,maxN=Inf){
   k <- length(y)/length(x)
-  lambda  <- mean(y) + mean(x)
-  samplesize_counts(theta,lambda,k)
+  lambda  <- mean(x)
+  pmin(maxN,samplesize_counts(theta,lambda,k))
 }

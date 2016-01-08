@@ -202,27 +202,25 @@ run_simulation_counts <- function(scenarios,B=3,...){
 }
 
 set.seed(1)
-scenarios_test <- expand.grid(n1=14,
-                              n=28,
+scenarios_test <- expand.grid(n1=c(8,10,14),
                               theta= c(1,1.5),
-                              df = c(5,10),
+                              df = c(5,8),
                               perms= 1000)
-        
-
+scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
-sim_counts=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
+sim_countsEQ=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
 
-save(sim_counts,file=vfile("../data/sim_counts",ending="rda"))
+save(sim_countsEQ,file=vfile("../data/sim_countsEQ",ending="rda"))
 ```
 
 ```{r}
 library(pander)
-load(vfile("../data/sim_counts",ending="rda"))
-pander(sim_counts,split.tables=100)
+load(vfile("../data/sim_countsEQ",ending="rda"))
+pander(sim_countsEQ,split.tables=100)
 ```
 
 See the distribution of the samples ASN and maxSN, is fix. furthermore, I can't decrease n1 and n. 
 
-Wald test is in control under poisson data enerating process, while here it is very anticonservative.
+Wald test is in control under poisson data generating process (checked by simulation), while here it is very anticonservative.
 
 NB slightly anticonservative.
