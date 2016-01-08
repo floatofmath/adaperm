@@ -28,6 +28,7 @@ library(parallel)
 library(bt88.03.704)
 library(adaperm)
 library(flip)
+library(ggplot2)
 options(mc.cores=detectCores()-1)
 ##' Adaptive permutation test one-sample problems
 ##'
@@ -161,7 +162,7 @@ obviously does not hold for all parent distributions! A way out may be
 bootstrap?
 
 
-```{r}
+```{r,eval=F}
 x1 <- rnorm(10)
 r1 <- rank(x1)
 
@@ -218,15 +219,74 @@ n=200
 data <- matrix(rnorm_cont(B*n,mean=0.8,sd=2,cshift=0,csd=3),nrow=n)
 
 ## small preplanned trial
-Gs <- expand.grid(ne=seq(10,100,10),n1=5,n=10,permutations=10000)
+G5 <- expand.grid(ne=seq(10,100,10),n1=5,n=10,permutations=10000)
+G6 <- expand.grid(ne=seq(12,100,10),n1=6,n=12,permutations=10000)
+G10 <- expand.grid(ne=seq(20,100,10),n1=10,n=20,permutations=10000)
 ## medium preplanned trial
 Gm <- expand.grid(ne=seq(30,100,10),n1=15,n=30,permutations=10000)
 ## large preplanned trial
-Gl <- expand.grid(ne=seq(60,100,5),n1=30,n=60,permutations=10000)
+Gl <- expand.grid(ne=seq(60,100,10),n1=30,n=60,permutations=10000)
 
-G <- rbind(Gs,Gm,Gl)
-power_second_stage <- run_simulation_general(G,B=1000)
+G <- rbind(G5,G6,G10,Gm,Gl)
+power_second_stage <- run_simulation_general(G,B=B)
 
-save(power_second_stage,file=vfile('power_second_stage'))
+##save(power_second_stage,file=vfile('power_second_stage'))
+
+##load('~/srv-home/repos/adaperm/vignettes/power_second_stage_node5_151221.Rd')
+
+
+ggplot(power_second_stage,aes(x=ne,y=permtestT/invnormT))+geom_path(aes(linetype=factor(n1)),col='green') +
+    geom_path(aes(y=permtestW/invnormW,linetype=factor(n1)),col='blue')
+
+foo <- data[,1]
+x1 <- foo[1:5]
+x2 <- foo[6:10]
+hist(dist <- adaperm:::perm_dist(x1,x2,sign(x1),sign(x2),stat=signedranks,B=10000,restricted=F))
+abline(v={talpha <- min(dist[rank(dist,ties.method='min')>=ceiling((1-.025)*length(dist))])})
+hist(cdist <- adaperm:::cond_dist(x1,x2,sign(x1),sign(x2),stat=signedranks,B=1000,restricted=F))
+
+rank(dist,ties.method ="max",na.last="keep")/length(dist)
+abline(v=talpha)
+permutation_CER(x1=x1,g1=sign(x1),x2=x2,stat=sumdiff,permutations=10000,one_sample=T)
+permutation_CER2(x1=x1,g1=sign(x1),x2=x2,stat=sumdiff,permutations=10000,one_sample=T)
+mean(cdist>=talpha)
+mean(dist>=talpha)
+
+
+
+permutation_CER2 <- function(x1,g1,x2,stat=sumdiff,
+                            permutations = 1000,alpha=.025,
+                            g2=rep(c(-1,1),each=length(x2)/2),one_sample=FALSE,
+                            restricted=TRUE,...){
+  n1 <- length(g1)
+  n <- length(c(x1,x2))
+  n2 <- n-n1
+  ## right parameter setting for one_sample
+  if(one_sample&restricted) warning("Only un-restricted sampling is allowed for one-sample setting!")
+  if(one_sample) {
+    restricted <- FALSE 
+    g1 <- sign(x1)
+    x1 <- abs(x1)
+    g2 <- sign(x2)
+    x2 <- abs(x2)
+  }
+  ## balanced second stage!!
+  dist <- adaperm:::perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  m <- length(dist)
+  talpha <- min(dist[rank(-dist,ties.method='max') <= (alpha*m)])
+  trimmings <- (alpha - mean(dist>=talpha))
+  cer1 <- mean(cdist>=talpha)+trimmings
+  ##    pvals <- unlist(lapply(cdist,function(x) sum(dist>=x)/B))
+  ##    cer2 <- sum(pvals<=alpha)/B
+  trimmings
+}
+
+x1s <- data[1:5,]
+x2s <- data[6:10,]
+
+trimmings <- sapply(1:ncol(x1s),function(i) permutation_CER2(x1s[,i],sign(x1s[,i]),x2s[,i],stat=signedranks,one_sample=T,permutations=10000))
+all(trimmings>0)
+summary(trimmings)
 
 ```
