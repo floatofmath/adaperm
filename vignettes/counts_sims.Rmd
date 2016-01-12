@@ -25,7 +25,7 @@ library(MASS)
 options(mc.cores=detectCores()-1)
 
 #N permutation for the first simulations
-Bsim=10
+Bsim=3
 #source('~/github/resamplingMCP/R/simulation.R', echo=TRUE)
 
 summaryResSim <- function(res,alphas=c(.01,.05,.1,.5,.75),na.rm=FALSE){
@@ -201,7 +201,7 @@ run_scenario_counts <- function(B,...){
                          treatment_opts=list(df=scenario$df,theta=scenario$theta,lambda=scenario$lambda))})
     results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),
                                         permtest=mean(permtest),
-#                                         permtest2=mean(permtest2),
+                                       permtRatio=mean(permtest_ratio),
                                         invnormT=mean(invnorm),
 invnormWlcx=mean(invnorm_wlcx),
 
@@ -228,8 +228,8 @@ scenarios_test <- expand.grid(n1=c(10,20,50),
                               perms= 1000)
 scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
-sim_counts_poisson=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
-# sim_counts_poisson
+sim_counts_poisson=run_simulation_counts(scenarios_test,B=100,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=100)
+sim_counts_poisson
 save(sim_counts_poisson,file=vfile("../data/sim_counts_poisson",ending="rda"))
 ```
 
@@ -247,7 +247,7 @@ scenarios_test <- expand.grid(n1=c(10,20,50),
                               perms= 1000)
 scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
-sim_countsEQ=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
+sim_countsEQ=run_simulation_counts(scenarios_test,B=10,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=10)
 
 save(sim_countsEQ,file=vfile("../data/sim_countsEQ",ending="rda"))
 
