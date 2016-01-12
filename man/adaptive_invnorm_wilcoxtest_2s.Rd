@@ -4,8 +4,8 @@
 \alias{adaptive_invnorm_wilcoxtest_2s}
 \title{Inverse normal adaptive wilcoxon test}
 \usage{
-adaptive_invnorm_wilcoxtest_2s(x, y, n1, n, ne, test_statistic, m1 = n1,
-  m = n, me = ne, perms = 1000, alpha = 0.025)
+adaptive_invnorm_wilcoxtest_2s(x, y, n1, n, ne, m1 = n1, m = n, me = ne,
+  alpha = 0.025)
 }
 \arguments{
 \item{x}{Observations}

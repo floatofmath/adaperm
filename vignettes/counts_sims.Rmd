@@ -1,6 +1,6 @@
 ---
 title: "Simulation studies: Conditional permutation vs inverse normal combiantion tests"
-subtitle: "Conuts data"
+subtitle: "Counts data"
 author: Florian Klinglmueller
 output: rmarkdown::html_vignette
 vignette: >
@@ -24,6 +24,8 @@ library(flip)
 library(MASS)
 options(mc.cores=detectCores()-1)
 
+#N permutation for the first simulations
+Bsim=10
 #source('~/github/resamplingMCP/R/simulation.R', echo=TRUE)
 
 summaryResSim <- function(res,alphas=c(.01,.05,.1,.5,.75),na.rm=FALSE){
@@ -51,7 +53,7 @@ r_counts_pair <- function(n,delta=0,df=2){
 }
 
 n=10
-Y=matrix(r_counts_pair (n*1000,df=1),n,1000)
+Y=matrix(r_counts_pair (n*Bsim,df=1),n,Bsim)
 ps=apply(Y,2,function(y)t.test(y)$p.value)
 plot.ecdf(ps);abline(0,1)
 ps.prm=p.value(flip(Y))
@@ -87,7 +89,7 @@ n=14
 theta=1
 df=5
 x=rep(0:1,each=n/2)
-Y=rbind(matrix(r_counts(1000*n/2,df=df),n/2),matrix(r_counts(1000*n/2,df=df,theta=theta),n/2))
+Y=rbind(matrix(r_counts(Bsim*n/2,df=df),n/2),matrix(r_counts(Bsim*n/2,df=df,theta=theta),n/2))
 
 ps=apply(Y,2,function(y){res=summary(glm(y~x,family = poisson))
                          s <- res$coefficients[2,"z value"]>0
@@ -114,7 +116,7 @@ Under H1
 ```{r}
 set.seed(1)
 theta=1.5
-Y=rbind(matrix(r_counts(1000*n/2,df=df),n/2),matrix(r_counts(1000*n/2,df=df,theta=theta),n/2))
+Y=rbind(matrix(r_counts(Bsim*n/2,df=df),n/2),matrix(r_counts(Bsim*n/2,df=df,theta=theta),n/2))
 
 ps=apply(Y,2,function(y){res=summary(glm(y~x,family = poisson))
                          s <- res$coefficients[2,"z value"]>0
@@ -159,12 +161,13 @@ ne <- 25
 x <- r_counts(ne,df=5)
 y <- r_counts(ne,df=5,theta=2)
 adaptive_permtest_2s(x,y,n1,n,ne,meandiff)
-# adaptive_permtest2_2s(x,y,n1,n,ne,meandiff,resam=1000)
+adaptive_permtest_2s(x,y,n1,n,ne,meanratio)
 
 adaptive_invnormtest_2s(x,y,n1,n,ne)
 adaptive_invnorm_wilcoxtest_2s (x,y,n1,n,ne)
 adaptive_invnormtest_negbin_2s(x,y,n1,n,ne)
 adaptive_waldtest_2s(x,y,n1,n,ne)
+adaptive_invnormtest_2s(x,y,n1,n,ne)
 
 samplesize_counts(2,5)
 samplesize_counts(1.5,5)
@@ -232,8 +235,8 @@ save(sim_counts_poisson,file=vfile("../data/sim_counts_poisson",ending="rda"))
 
 ```{r}
 library(pander)
-load(vfile("../data/sim_counts_counts",ending="rda"))
-pander(sim_counts_counts,split.tables=100)
+load(vfile("../data/sim_counts_poisson",ending="rda"))
+pander(sim_counts_poisson,split.tables=100)
 ```
 # over dispersion
 ```{r}

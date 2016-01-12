@@ -102,6 +102,29 @@ meandiff <- function(x,g){
 }
 
 
+##' Matrix computation of difference of means between two groups
+##'
+##' @template matrix_stats_details
+##' 
+##' @title Difference of means
+##' 
+##' @author Florian Klinglmueller
+##'
+##' @export
+meanratio <- function(x,g){
+  if(is.matrix(g)){
+    if(is.matrix(x)){
+      stop("Only one of g or x may be passed as a matrix")
+    }
+#     warning("Ratio of means of g matrix is not a C++ code yet")
+    apply(g,2,function(gi) meanratio(x,gi))
+      } else if(is.matrix(x)){
+    colMeans(x[g>0,]) / colMeans(x[g<=0,])
+  } else {
+    sum(x*{g>0})/sum({g>0}) / sum(x*({g<=0}))/sum({g<=0})
+  }
+}
+
 ##' Matrix computation of difference of sums between two groups
 ##'
 ##' @template matrix_stats_details

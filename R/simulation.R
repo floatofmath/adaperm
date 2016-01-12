@@ -201,12 +201,13 @@ adaptive_waldtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
 ##' @template onesample_sims
 ##' @author Florian Klinglmueller
 ##' @export
+
 adaptive_invnorm_wilcoxtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
   xs <- split(x,rep(1:2,c(n1,ne-n1)))
   ys <- split(y,rep(1:2,c(m1,ne-m1)))
-  p1 <- wilcox.test(xs[[1]],ys[[1]],alternative='greater')$p.value
-  p2 <- wilcox.test(xs[[2]],ys[[2]],alternative='greater')$p.value
-  pnorm(sum(sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)),lower=FALSE) <= alpha 
+  p1 <- wilcox.test(xs[[1]],ys[[1]],alternative='less')$p.value
+  p2 <- wilcox.test(xs[[2]],ys[[2]],alternative='less')$p.value
+  alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
 }
 
 
