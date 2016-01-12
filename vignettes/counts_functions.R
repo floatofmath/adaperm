@@ -1,4 +1,4 @@
-
+##### alternative version of the function!!
 adaptive_permtest_2s <- function(x,y,n1,n,ne,test_statistic,
                                  m1=n1,m=n,me=ne,perms=1000,alpha=0.025){
   if(ne>n){
@@ -22,7 +22,7 @@ adaptive_permtest_2s <- function(x,y,n1,n,ne,test_statistic,
   q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms)
   A>=q
 }
-###########################
+##########################
 
 adaptive_permtest2_2s <- function(x,y,n1,n,ne,test_statistic,
                                   m1=n1,m=n,me=ne,perms=1000,alpha=0.025,
@@ -50,35 +50,7 @@ adaptive_permtest2_2s <- function(x,y,n1,n,ne,test_statistic,
   A>=q
 }
 
-######## other adaptive tests
-##################
-#' To be checked
-adaptive_invnormtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
-  xs <- split(x,rep(1:2,c(n1,ne-n1)))
-  ys <- split(y,rep(1:2,c(m1,ne-m1)))
-  p1 <- t.test(xs[[1]],ys[[1]],alternative='less')$p.value
-  p2 <- t.test(xs[[2]],ys[[2]],alternative='less')$p.value
-  alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
-}
 
-#' To be checked
-adaptive_invnormtest_negbin_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
-  xs <- split(x,rep(1:2,c(n1,ne-n1)))
-  ys <- split(y,rep(1:2,c(m1,ne-m1)))
-  sg1 <- summary(glm.nb(c(xs[[1]],ys[[1]])~rep(0:1,c(n1,m1))))
-  sg2 <- summary(glm.nb(c(xs[[2]],ys[[2]])~rep(0:1,c(ne-n1,ne-m1))))
-  p1 <- sg1$coefficients[2,"Pr(>|z|)"]
-  s1 <- sg1$coefficients[2,"z value"]>0
-  p2 <- sg2$coefficients[2,"Pr(>|z|)"]
-  s2 <- sg2$coefficients[2,"z value"]>0
-  p1 <- ifelse(s1,p1/2,1-p1/2)
-  p2 <- ifelse(s2,p2/2,1-p2/2)
-  alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
-}
-
-adaptive_waldtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
-  log(mean(y)/mean(x))/sqrt(1/sum(x)+1/sum(y))>qnorm(alpha,lower=F)
-}
 ###########
 
 
@@ -115,9 +87,10 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
   }
   list(ne = ne,
        permtest = adaptive_permtest_2s(x,y,n1,n,ne,test_statistic,m1,m,me),
-       permtest2 = adaptive_permtest2_2s(x,y,n1,n,ne,test_statistic,m1,m,me,resam=resam),
-       invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
-       invnorm_nb=adaptive_invnormtest_negbin_2s(x,y,n1,n,ne,m1,m,me),
+#        permtest2 = adaptive_permtest2_2s(x,y,n1,n,ne,test_statistic,m1,m,me,resam=resam),
+      invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
+      invnorm_wlcx = adaptive_invnorm_wilcoxtest_2s(x,y,n1,n,ne,m1,m,me),
+      invnorm_nb=adaptive_invnormtest_negbin_2s(x,y,n1,n,ne,m1,m,me),
        wald = adaptive_waldtest_2s(x,y,n1,n,ne))
 }
 
@@ -148,4 +121,17 @@ condpowerrule_counts <- function(x,y,theta=1.5,maxN=Inf){
   k <- length(y)/length(x)
   lambda  <- mean(x)
   pmin(maxN,samplesize_counts(theta,lambda,k))
+}
+
+
+
+
+############## wilcox alternativo
+
+adaptive_invnorm_wilcoxtest_2s <- function(x,y,n1,n,ne,m1=n1,m=n,me=ne,alpha=0.025){
+  xs <- split(x,rep(1:2,c(n1,ne-n1)))
+  ys <- split(y,rep(1:2,c(m1,ne-m1)))
+  p1 <- wilcox.test(xs[[1]],ys[[1]],alternative='less')$p.value
+  p2 <- wilcox.test(xs[[2]],ys[[2]],alternative='less')$p.value
+  alpha >= {sqrt(c(n1,n-n1)/n) * qnorm(c(p1,p2),lower=F)} %>% sum() %>% pnorm(lower=FALSE) 
 }

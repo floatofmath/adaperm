@@ -12,3 +12,4 @@ LinkingTo: Rcpp, RcppArmadillo
 License: MIT
 LazyData: true
 VignetteBuilder: knitr
+RoxygenNote: 5.0.0

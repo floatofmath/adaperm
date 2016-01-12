@@ -66,17 +66,19 @@ pander(summaryResSim(cbind(param.t=ps,perm=ps.prm)))
 
 ```{r, echo=FALSE} 
 #' @description generates counts 
-#' from a poisson with mean rchisq(df=df)+delta
+#' from a poisson with lambda = rchisq(df=df*theta)
+#' If means is not null, it generates from a poisson with given (fixed?) parameter lambda.
+#' 
 
-r_counts <- function(n,theta=1,df=2){
+r_counts <- function(n,theta=1,df=2,lambda=NULL){
   # if(!is.finite(disp))
   #   rpois(n,lambda=exp(mu)) else
   #   rnbinom(n,mu=exp(mu),size=exp(disp))
-  means=rchisq(n=n,df = df)
-#   if(is(means,"try-error")) {browser()}
-  means[means==0]=.5
-  means[means>=10000]=10000
-  y=rpois(n = n,lambda = means*theta)
+  if (is.null(lambda)) lambda=rchisq(n=n,df = df)
+#   if(is(lambda,"try-error")) {browser()}
+  lambda[lambda<.5]=.5
+  lambda[lambda>10000]=10000
+  y=rpois(n = n,lambda = lambda*theta)
   y
 }
 
@@ -140,6 +142,9 @@ pander(summaryResSim(cbind(param.t=ps,param.nb=ps.nb,perm=ps.prm)))
 
 ```{r helper functions,echo=F}
 source("counts_functions.R")
+# qui si trova la
+# adaptive_permtest_2s
+#usata in queste simulazioni
 ```
 
 
@@ -154,9 +159,10 @@ ne <- 25
 x <- r_counts(ne,df=5)
 y <- r_counts(ne,df=5,theta=2)
 adaptive_permtest_2s(x,y,n1,n,ne,meandiff)
-adaptive_permtest2_2s(x,y,n1,n,ne,meandiff,resam=1000)
+# adaptive_permtest2_2s(x,y,n1,n,ne,meandiff,resam=1000)
 
 adaptive_invnormtest_2s(x,y,n1,n,ne)
+adaptive_invnorm_wilcoxtest_2s (x,y,n1,n,ne)
 adaptive_invnormtest_negbin_2s(x,y,n1,n,ne)
 adaptive_waldtest_2s(x,y,n1,n,ne)
 
@@ -167,15 +173,17 @@ samplesize_counts(1.5,5)
 
 ### Compare tests
 
-
-
 ```{r try comparison}
 ## one example fixed rule
-compare_adaptive_tests_2s(14,28,condpowerrule_counts,control_opts=list(df=5),treatment_opts=list(df=5,theta=1.5),rdist=r_counts,test_statistic=meandiff)
+compare_adaptive_tests_2s(14,28,condpowerrule_counts,
+                          control_opts=list(df=5),
+                          treatment_opts=list(df=5,theta=1.5),rdist=r_counts,test_statistic=meandiff)
 
 ```
 
-```{r simulation example,eval=F}
+
+#Simulation
+```{r simulation functions}
 
 run_scenario_counts <- function(B,...){
     ## just a wrapper around mclapply2
@@ -186,11 +194,15 @@ run_scenario_counts <- function(B,...){
                          n=scenario$n,
                          rule=scenario$rule,rdist=scenario$rdist,
                          test_statistic=scenario$test_statistic,
-                         control_opts=list(df=scenario$df),
-                         treatment_opts=list(df=scenario$df,theta=scenario$theta))})
+                         control_opts=list(df=scenario$df,lambda=scenario$lambda),
+                         treatment_opts=list(df=scenario$df,theta=scenario$theta,lambda=scenario$lambda))})
     results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),
-                                        permtest=mean(permtest),permtest2=mean(permtest2),
-                                        invnormT=mean(invnorm),invnormNB=mean(invnorm_nb),
+                                        permtest=mean(permtest),
+#                                         permtest2=mean(permtest2),
+                                        invnormT=mean(invnorm),
+invnormWlcx=mean(invnorm_wlcx),
+
+invnormNB=mean(invnorm_nb),
                                         wald=mean(wald))#,npcomb=mean(npcomb),permtest=mean(permtest))
 }
 
@@ -200,17 +212,42 @@ run_simulation_counts <- function(scenarios,B=3,...){
       c(scenarios[p,],do.call('run_scenario_counts',c(B=B,scenarios[p,],params)))
       ))
 }
+```
+
+## Poisson distribution
+
+```{r sim poisson,eval=F}
 
 set.seed(1)
-scenarios_test <- expand.grid(n1=c(8,10,14),
-                              theta= c(1,1.5),
-                              df = c(5,8),
+scenarios_test <- expand.grid(n1=c(10,20,50),
+                              theta= c(1,1.2),
+                              lambda=c(5,10),
+                              perms= 1000)
+scenarios_test$n=scenarios_test$n1*2
+# debug(run_scenario_counts)
+sim_counts_poisson=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
+# sim_counts_poisson
+save(sim_counts_poisson,file=vfile("../data/sim_counts_poisson",ending="rda"))
+```
+
+```{r}
+library(pander)
+load(vfile("../data/sim_counts_counts",ending="rda"))
+pander(sim_counts_counts,split.tables=100)
+```
+# over dispersion
+```{r}
+set.seed(1)
+scenarios_test <- expand.grid(n1=c(10,20,50),
+                              theta= c(1,1.2),
+                              df = c(5,10),
                               perms= 1000)
 scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
 sim_countsEQ=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
 
 save(sim_countsEQ,file=vfile("../data/sim_countsEQ",ending="rda"))
+
 ```
 
 ```{r}
