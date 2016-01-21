@@ -254,39 +254,5 @@ mean(dist>=talpha)
 
 
 
-permutation_CER2 <- function(x1,g1,x2,stat=sumdiff,
-                            permutations = 1000,alpha=.025,
-                            g2=rep(c(-1,1),each=length(x2)/2),one_sample=FALSE,
-                            restricted=TRUE,...){
-  n1 <- length(g1)
-  n <- length(c(x1,x2))
-  n2 <- n-n1
-  ## right parameter setting for one_sample
-  if(one_sample&restricted) warning("Only un-restricted sampling is allowed for one-sample setting!")
-  if(one_sample) {
-    restricted <- FALSE 
-    g1 <- sign(x1)
-    x1 <- abs(x1)
-    g2 <- sign(x2)
-    x2 <- abs(x2)
-  }
-  ## balanced second stage!!
-  dist <- adaperm:::perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
-  cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
-  m <- length(dist)
-  talpha <- min(dist[rank(-dist,ties.method='max') <= (alpha*m)])
-  trimmings <- (alpha - mean(dist>=talpha))
-  cer1 <- mean(cdist>=talpha)+trimmings
-  ##    pvals <- unlist(lapply(cdist,function(x) sum(dist>=x)/B))
-  ##    cer2 <- sum(pvals<=alpha)/B
-  trimmings
-}
-
-x1s <- data[1:5,]
-x2s <- data[6:10,]
-
-trimmings <- sapply(1:ncol(x1s),function(i) permutation_CER2(x1s[,i],sign(x1s[,i]),x2s[,i],stat=signedranks,one_sample=T,permutations=10000))
-all(trimmings>0)
-summary(trimmings)
 
 ```

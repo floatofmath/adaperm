@@ -233,3 +233,27 @@ adaptive_perm_test <- function(x1,x2,g1,g2,stat,B,alpha=.025,x3=NULL,g3=NULL){
     cer <- permutation_CER(x1,g1,x2,stat,B,alpha,g2)
     perm_test(x2,x3,g2,g3,stat,B)<=alpha
 }
+
+##' Difference between significance level and actual size of the permutation test, due to discreteness
+##'
+##' @title trimmings
+##' @param g1 first stage treatment group assignments
+##' @param g2 second stage treatment group assignmens
+##' @param restricted should permutation be restricted by group size stratified by stage 
+##' @param alpha significance level
+##' @return difference between size and significance level
+##' @author Florian Klinglmueller
+trimmings <- function(g1,g2,restricted,alpha=.025){
+    if(!restricted){
+        n <- length(g1)+length(g2)
+        B <- 2^n
+    } else {
+        n <- sum(g1<=0)+sum(g2<=0)
+        m <- sum(g1>0)+sum(g2>0)
+        n1 <- sum(g1<=0)
+        m1 <- sum(g1>0)
+        B <- choose(m1+n1,m1)*choose(m+n-n1-m1,m-m1)
+    }
+    b <- floor(B*alpha)
+    alpha-(b/B)
+}   

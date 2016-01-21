@@ -115,15 +115,13 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
     g2 <- sign(x2)
     x2 <- abs(x2)
   }
-  ## balanced second stage!!
-  dist <- perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
-  cdist <- cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  dist <- adaperm:::perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   m <- length(dist)
-  talpha <- min(dist[rank(dist,ties.method='min')>=ceiling((1-alpha)*m)])
-  cer1 <- mean(cdist>=talpha)
-  ##    pvals <- unlist(lapply(cdist,function(x) sum(dist>=x)/B))
-  ##    cer2 <- sum(pvals<=alpha)/B
-  c(cer1)
+  talpha <- min(dist[rank(-dist,ties.method='max') <= (alpha*m)])
+  trimmings <- trimmings(g1,g2,restricted,alpha)
+  cer1 <- mean(cdist>=talpha)+trimmings
+  return(cer1)
 }
 
 
