@@ -37,7 +37,7 @@ diffmean <- function(x,g){
     }
 }
 
-##' Sum of signed ranks, equivalent to the wilcoxon signed rank test.
+##' Sum of signed ranks, equivalent to the wilcoxon signed rank test. Note that we do count the ranks of zero differences! Since the number of zeros (in the observations) is fixed for all sign flips the test decision will be identical with that of the typical Wilcoxon signed-rank statistic. 
 ##'
 ##' @template matrix_stats_details
 ##' @title Sum of signed ranks
@@ -50,12 +50,59 @@ signedranks <- function(x,g){
         }
         colSums(rank(abs(x)) * (((g>0)*2)-1))
     } else if(is.matrix(x)){
-        colSums(colRanks(abs(x)) * (((g>0)*2)-1))
+        colSums(colRanks(abs(x),preserveShape=TRUE,ties.method='average') * (((g>0)*2)-1))
     } else {
         sum(rank(abs(x)) * (((g>0)*2)-1))
     }
 }
 
+##' Wilcoxon-Mann-Whitney U-Statistic 
+##'
+##' Computes the Wilcoxon-Mann-Whitney U-Statistic. Note that we do not remove the expected value n_T(n_T+1)/2 from the statistic as this is assumed to be equal across all permutations!
+##' 
+##' @title Wilcoxon-Mann-Whitney U-Statistic 
+##' @template matrix_stats_details
+##' @author Florian Klinglmueller
+##' @export
+ranksum <- function(x,g){
+    if(is.matrix(g)){
+        if(is.matrix(x)){
+            stop("Only one of g or x may be passed as a matrix")
+        }
+        colSums(rank(x) * (g>0))
+    } else if(is.matrix(x)){
+        colSums(colRanks(x,preserveShape=TRUE,ties.method='average') * (g>0))
+    } else {
+        sum(rank(x) * (g>0))
+    }
+}
+
+##' M-Test as in Maritz et al ???
+##'
+##' Computes a test statistic based on the difference of sums of m-statistics
+##' 
+##' @title Maritz m-statistic
+##' @template matrix_stats_details
+##' @author Florian Klinglmueller
+##' @export
+maritzm <- function(x,g,sq=.5){
+    if(is.matrix(g)){
+        if(is.matrix(x)){
+            stop("Only one of g or x may be passed as a matrix")
+        }
+        ## scaling factor
+        sf <- quantile(abs(x),sq)
+        ## maritz psi(x/s)
+        colSums(pmax(-1,pmin((x)/sf,1))*(2*(g>0)-1))
+    } else if(is.matrix(x)){
+        warning('Maritzm is slow when applied to matrices of samples')
+        sf <- apply(abs(x),2,quantile,probs=sq)
+        sapply(seq_along(sf),function(i) sum(pmax(-1,pmin(1,x[,i]/sf[i]))*(2*(g>0)-1)))
+    } else {
+        sf <- quantile(abs(x),sq)
+        sum(pmax(-1,pmin((x)/sf,1))*(2*(g>0)-1))
+    }
+}
 
 ##' Median of paired differences. Usefull in one-sample tests. 
 ##'

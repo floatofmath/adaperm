@@ -62,3 +62,22 @@ test_that("Test pairwise stuff",
               expect_aboutequal(as.numeric(t(pw_meandiff(X,g2)*n*2/3)),flip(X,make_pw_contrasts(g2),statTest='sum')@res$Stat)
           })
           
+test_that("Rank stuff",
+          {
+              N <- length(g)
+              expect_equal(mean(signedranks(largeX,g)),0,tolerance=1)
+              expect_equal(mean(ranksum(largeX,g)),(N*(N+1)/4),tolerance=.001)
+              G <- omega(rep(0:1,each=8),B=14000)
+              Gs <- omega(rep(0:1,each=8),restricted=F,B=66000)
+              expect_equal(mean(ranksum(rnorm(16),G)),16*17/4)
+              expect_equal(mean(signedranks(rnorm(16),Gs)),0)
+          })
+          
+test_that("m-Estimators",{
+          expect_equal(median(maritzm(X,g)),0,tolerance=1)
+          expect_equal(median(maritzm(X,g)),0,tolerance=1)
+          G <- omega(rep(0:1,each=8),B=14000)
+          Gs <- omega(rep(0:1,each=8),restricted=F,B=66000)
+          expect_equal(mean(maritzm(rnorm(16),G)),0)
+          expect_equal(mean(maritzm(rnorm(16),Gs)),0)
+      })
