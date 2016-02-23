@@ -80,4 +80,5 @@ test_that("m-Estimators",{
           Gs <- omega(rep(0:1,each=8),restricted=F,B=66000)
           expect_equal(mean(maritzm(rnorm(16),G)),0)
           expect_equal(mean(maritzm(rnorm(16),Gs)),0)
+          expect_equal(maritzm(x,g,sq=1),sumdiff(x/max(x),g))
       })

@@ -4,7 +4,7 @@
 \alias{perm_test}
 \title{perform permutation test}
 \usage{
-perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, ...)
+perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted, ...)
 }
 \arguments{
 \item{x1}{First stage observations}
@@ -22,6 +22,8 @@ perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, ...)
 \item{x3}{Third stage observations}
 
 \item{g3}{Third stage group assignments}
+
+\item{restricted}{Should group sizes be considered fixed}
 
 \item{...}{further arguments to perm_dist}
 }

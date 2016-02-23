@@ -6,7 +6,7 @@
 \usage{
 permutation_CER2(x1, g1, x2, x3, stat = sumdiff, permutations = 1000,
   subsamples = 1000, alpha = 0.025, g2 = rep(c(-1, 1), each =
-  length(x2)/2), one_sample = FALSE, restricted = TRUE, ...)
+  length(x2)/2), restricted = TRUE, ...)
 }
 \arguments{
 \item{x1}{vector of preplanned first stage observations}
@@ -27,13 +27,9 @@ permutation_CER2(x1, g1, x2, x3, stat = sumdiff, permutations = 1000,
 
 \item{g2}{template vector for second stage treatment assignments}
 
-\item{one_sample}{}
-
-\item{restricted}{}
+\item{restricted}{should group sizes be treated fixed}
 
 \item{...}{additional options to \code{stat}}
-
-\item{each}{}
 }
 \value{
 numeric value of the conditional error rate

@@ -6,7 +6,7 @@
 \usage{
 permutation_CER(x1, g1, x2, stat = sumdiff, permutations = 1000,
   alpha = 0.025, g2 = rep(c(-1, 1), each = length(x2)/2),
-  one_sample = FALSE, restricted = TRUE, ...)
+  restricted = TRUE, ...)
 }
 \arguments{
 \item{x1}{vector of preplanned first stage observations}
@@ -22,6 +22,8 @@ permutation_CER(x1, g1, x2, stat = sumdiff, permutations = 1000,
 \item{alpha}{pre-fixed significance level}
 
 \item{g2}{template vector for second stage treatment assignments}
+
+\item{restricted}{}
 
 \item{...}{additional options to \code{stat}}
 

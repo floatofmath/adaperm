@@ -55,14 +55,19 @@ rnorm_cont <- function(n,mean=0,sd=1,cprop=.1,cshift=3,csd=sd){
 ##'
 ##' @export
 type1 <- function(X=rnorm,X2=NULL,n,n1,stat=meandiff,B,MCMC,one_sample=FALSE,...){
-  x <- X(n)
-  pm <- dplyr::bind_rows(lapply(1:MCMC,function(i) {
-    g <- sample(rep(c(-1,1),each=n1/2))
-    y <- if(is.null(X2)) x else c(x[1:n1],X2(n-n1))
-        list(preplanned=permutation_CER(x[1:n1],g,x[(n1+1):n],B=B,stat=stat,one_sample=one_sample),
-             influenced=permutation_CER(y[1:n1],g,y[(n1+1):n],B=B,stat=stat,one_sample=one_sample),
-             normal=normal_CER(x[1:n1],g,n,one_sample=one_sample,...),
-             ttest=t_CER(x[1:n1],g,n,one_sample=one_sample,...))
+    x <- X(n)
+    restricted=TRUE
+    if(one_sample){
+        x <- abs(x)
+    }
+    pm <- dplyr::bind_rows(lapply(1:MCMC,function(i) {
+                                      g <- sample(rep(c(-1,1),each=n1/2))
+                                      y <- if(is.null(X2)) x else c(x[1:n1],X2(n-n1))
+                                      if(one_sample) y <- abs(y)
+                                      list(preplanned=permutation_CER(x[1:n1],g,x[(n1+1):n],B=B,stat=stat,restricted=!one_sample),
+                                           influenced=permutation_CER(y[1:n1],g,y[(n1+1):n],B=B,stat=stat,restricted=!one_sample),
+                                           normal=normal_CER(x[1:n1],g,n,one_sample=one_sample,...),
+                                           ttest=t_CER(x[1:n1],g,n,one_sample=one_sample,...))
         }))
     pm
 }
@@ -86,15 +91,17 @@ type1 <- function(X=rnorm,X2=NULL,n,n1,stat=meandiff,B,MCMC,one_sample=FALSE,...
 ##'
 ##' @export
 compare_power <- function(X=rnorm,X2=NULL,ncp,n,n1,stat=meandiff,B,MCMC,one_sample=FALSE,...){
-  x <- X(n)
-  pm <- dplyr::bind_rows(lapply(1:MCMC,function(i) {
-    g <- sample(rep(c(-1,1),each=n1/2))
-    y <- if(is.null(X2)) x else c(x[1:n1],X2(n-n1))
-        list(preplanned=permutation_CER(x[1:n1],g,x[(n1+1):n],B=B,stat=stat,one_sample=one_sample),
-             influenced=permutation_CER(y[1:n1],g,y[(n1+1):n],B=B,stat=stat,one_sample=one_sample),
-             normal=normal_CER(x[1:n1],g,n,one_sample=one_sample,...),
-             ttest=t_CER(x[1:n1],g,n,one_sample=one_sample,...))
-        }))
+    x <- X(n)
+    if(one_sample) x <- abs(x)
+    pm <- dplyr::bind_rows(lapply(1:MCMC,function(i) {
+                                      g <- sample(rep(c(-1,1),each=n1/2))
+                                      y <- if(is.null(X2)) x else c(x[1:n1],X2(n-n1))
+                                      if(one_sample) y <- abs(y)
+                                      list(preplanned=permutation_CER(x[1:n1],g,x[(n1+1):n],B=B,stat=stat,restricted=!one_sample),
+                                           influenced=permutation_CER(y[1:n1],g,y[(n1+1):n],B=B,stat=stat,restricted=!one_sample),
+                                           normal=normal_CER(x[1:n1],g,n,one_sample=one_sample,...),
+                                           ttest=t_CER(x[1:n1],g,n,one_sample=one_sample,...))
+                                  }))
     pm
 }
 
@@ -200,6 +207,7 @@ cond_power_rule_norm <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
 }
 
 ##' Conditional power rule for the one-sample (or paired) t-test using the function \code{link{stats::power.t.test}}. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
+##' 
 ##' @title Conditional power sample size reassessment rule (t-test)
 ##' @template power_rules
 ##' @author Florian Klinglmueller

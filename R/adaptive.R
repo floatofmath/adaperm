@@ -93,6 +93,7 @@ z_test <- function(x1,x2,g1,g2,sigma=1,x3=NULL,g3=NULL){
 ##' @param alpha pre-fixed significance level
 ##' @param g2 template vector for second stage treatment assignments
 ##' @param each 
+##' @param restricted 
 ##' @param ... additional options to \code{stat}
 ##' @return numeric value of the conditional error rate
 ##' 
@@ -101,20 +102,12 @@ z_test <- function(x1,x2,g1,g2,sigma=1,x3=NULL,g3=NULL){
 ##' @export
 permutation_CER <- function(x1,g1,x2,stat=sumdiff,
                             permutations = 1000,alpha=.025,
-                            g2=rep(c(-1,1),each=length(x2)/2),one_sample=FALSE,
+                            g2=rep(c(-1,1),each=length(x2)/2),
                             restricted=TRUE,...){
   n1 <- length(g1)
   n <- length(c(x1,x2))
   n2 <- n-n1
   ## right parameter setting for one_sample
-  if(one_sample&restricted) warning("Only un-restricted sampling is allowed for one-sample setting!")
-  if(one_sample) {
-    restricted <- FALSE 
-    g1 <- sign(x1)
-    x1 <- abs(x1)
-    g2 <- sign(x2)
-    x2 <- abs(x2)
-  }
   dist <- adaperm:::perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   m <- length(dist)
@@ -143,9 +136,7 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
 ##' @param subsamples number of (second stage) subsamples used for conditional error rate estimation
 ##' @param alpha pre-fixed significance level
 ##' @param g2 template vector for second stage treatment assignments
-##' @param each 
-##' @param one_sample 
-##' @param restricted 
+##' @param restricted should group sizes be treated fixed
 ##' @param ... additional options to \code{stat}
 ##' @return numeric value of the conditional error rate
 ##' 
@@ -154,7 +145,7 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
 ##' @export
 permutation_CER2 <- function(x1,g1,x2,x3,stat=sumdiff,
                              permutations = 1000, subsamples = 1000, alpha=.025,
-                             g2=rep(c(-1,1),each=length(x2)/2),one_sample=FALSE,
+                             g2=rep(c(-1,1),each=length(x2)/2),
                              restricted=TRUE,...){
     n1 <- length(g1)
     n <- length(c(x1,x2))
@@ -162,17 +153,7 @@ permutation_CER2 <- function(x1,g1,x2,x3,stat=sumdiff,
     nt <- length(c(x1,x2,x3))
     ne <- nt-n
     if(ne == 0) stop("Conditional should not be computed if sample size is not increased")
-    ## right parameter setting for one_sample
-    if(one_sample&restricted) warning("Only un-restricted sampling is allowed for one-sample setting!")
-    if(one_sample) {
-        restricted <- FALSE 
-        g1 <- sign(x1)
-        x1 <- abs(x1)
-        g2 <- sign(x2)
-        x2 <- abs(x2)
-    }
     ## balanced second stage!!
-    
     if(subsamples < choose(n2+ne,n2)){
         x2rs <- random_samples_cpp(c(x2,x3),n2,subsamples)
     } else {
