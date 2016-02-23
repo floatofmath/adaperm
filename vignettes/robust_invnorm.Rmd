@@ -214,7 +214,7 @@ run_simulation_general <- function(scenarios,B=100,...){
     bind_rows(lapply(1:nrow(scenarios),function(p) c(scenarios[p,],do.call('run_scenario',c(B=B,scenarios[p,],params)))))
 }
 
-B=1000
+B=2000
 n=200
 data <- matrix(rnorm_cont(B*n,mean=0.8,sd=2,cshift=0,csd=3),nrow=n)
 
@@ -235,7 +235,7 @@ power_second_stage <- run_simulation_general(G,B=B)
 ##load('~/srv-home/repos/adaperm/vignettes/power_second_stage_node5_151221.Rd')
 
 
-ggplot(power_second_stage,aes(x=ne,y=permtestT/invnormT))+geom_path(aes(linetype=factor(n1)),col='green') +
+ggplot(subset(power_second_stage,n1>10),aes(x=ne,y=permtestT/invnormT))+geom_path(aes(linetype=factor(n1)),col='green') +
     geom_path(aes(y=permtestW/invnormW,linetype=factor(n1)),col='blue')
 
 foo <- data[,1]

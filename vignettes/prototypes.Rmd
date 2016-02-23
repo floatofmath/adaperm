@@ -1,0 +1,151 @@
+---
+title: "Permutation tests for adaptive designs"
+subtitle: "Prototypes for experimental package features"
+author: Florian Klinglmueller
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r}
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(pander)
+library(parallel)
+library(bt88.03.704)
+library(adaperm)
+options(mc.cores=detectCores()-1)
+```
+
+# Adjusted p-values
+
+Let $T_{(1)},...,T_{(|G|)}$ the ordered resampling test statistics of
+the pre-planned test. Then the $p$-value of the test following an
+adaptive interim analysis is given by $\tilde{p} = 1-\frac{r^*}{|\G|}$
+where
+
+$$
+r^*=\min \{ r : \pe \leq A(T_{(r)})\}
+$$
+
+
+and $A(t)$ is defined as the conditional survival function of the
+preplanned test given the first stage treatment assignments:
+
+This is easily computed:
+
+```{r}
+
+sim_pvals <- function(B,delta,nulldist=rnorm,...){
+    replicate(B,{
+                  x1 <- nulldist(10,...)+rep(0:1,5)*delta
+                  x2 <- nulldist(10,...)+rep(0:1,5)*delta
+                  xE <- nulldist(6,...)+rep(0:1,3)*delta
+                  pt <- t.test(c(x1,x2,xE)~rep(0:1,13),alternative='less',var.equal=T)$p.value
+                  pdist  <- perm_dist(x1,x2,rep(0:1,5),rep(0:1,5),ranksum,B=10000)
+                  pw <- wilcox.test(c(x1,x2,xE)~rep(0:1,13),alternative='less')$p.value
+                  cdist <- adaperm:::cond_dist(x1,x2,rep(0:1,5),rep(0:1,5),ranksum,B=10000)
+                  edist <- perm_dist(x2,xE,rep(0:1,5),rep(0:1,3),ranksum,B=10000)
+                  t2 <- ranksum(c(x2,xE),rep(0:1,8))
+                  c(sum(pdist>=quantile(cdist,sum(edist<t2)/length(edist)))/length(pdist),pt,pw)
+              })
+    }
+
+
+pval_dist <- sim_pvals(1000,1,rnorm_cont,csd=10)
+head(t(pval_dist))
+cor(t(pval_dist)[,c(1,3)])
+plot(t(pval_dist)[,c(1,3)])
+par(mfrow=c(3,1))
+plot(sort(pval_dist[1,]),seq(0,1,length.out=1000))
+plot(sort(pval_dist[2,]),seq(0,1,length.out=1000))
+plot(sort(pval_dist[3,]),seq(0,1,length.out=1000))
+
+## lookin good!
+rowSums(pval_dist<.05)/1000
+hist(pval_dist[1,])
+
+par(mfrow=c(3,1))
+xl <- min(c(pdist,cdist,edist))
+xu <- max(c(pdist,cdist,edist))
+hist(pdist,xlim=c(xl,xu))
+hist(cdist,xlim=c(xl,xu))
+hist(edist,xlim=c(xl,xu))
+
+
+```
+
+# Robus m-Tests based on maritz' m-estimator
+
+Maritz et al. and Rosenbaum suggest the use of an $m$-estimator
+(Huber) for use with a rerandomization test. In `adaperm` we have
+implemented such a test statistic in the function `maritzm`.
+
+
+
+```{r}
+compare_adaptive_tests <- function(n1,n,rule,rdist,test_statistic,mpfr=F,resam=100,perms=100,...){
+    x <- rdist(n,...)
+    ne <- rule(x[1:n1])
+    if(ne>n){
+        x <- c(x,rdist(ne-n,...))
+    } else {
+        ne <- n
+    }
+    list(ne = ne,
+         permtestT = adaptive_permtest_os(x,n1,n,ne,diffmean,perms=perms),
+         invnormT = adaptive_invnorm_ttest_os(x,n1,n,ne),
+         permtestW = adaptive_permtest_os(x,n1,n,ne,signedranks,perms=perms),
+         invnormW = adaptive_invnorm_wilcoxtest_os(x,n1,n,ne),
+         permtestM = adaptive_permtest_os(x,n1,n,ne,maritzm,perms=perms))
+}
+
+##' Compare operating characteristics for a number of one-sample tests
+##'
+##' \code{test_funs} needs to be a list of functions that take arguments \code{x,n1,n,ne,permutations} and return \code{TRUE} of \code{FALSE} depending on whether the corresponding decision rule rejects the null hypothesis or not.
+##'
+##' \code{rule} needs to be a function that takes as argument the vector of first stage observations and return an interger number, which (if larger than \code{n}) will be used as the new total sample size.
+##' 
+##' @title Compare one-sample test procedures
+##' @param test_funs list of test functions (see Details)
+##' @param n1 first stage sample size
+##' @param n pre-planned total sample size
+##' @param rule sample size reassessment rule (see Details)
+##' @param rdist distribution from which to draw observations 
+##' @param ... additional arguments to rdist
+##' @return let's see
+##' @author Florian Klinglmueller
+compare_tests_onesample <- function(test_funs,n1,n,rule,rdist,...){
+    x <- rdist(n,...)
+    ne <- rule(x[1:n1])
+    if(ne>n){
+        x <- c(x,rdist(ne-n,...))
+    } else {
+        ne <- n
+    }
+    lapply(test_funs,do.call,list(x,n1,n,ne))
+}
+
+tests <- list(
+    permtestT = function(x,n1,n,ne) adaptive_permtest_os(x,n1,n,ne,diffmean,perms=10000),
+    invnormT = function(x,n1,n,ne)  adaptive_invnorm_ttest_os(x,n1,n,ne),
+    permtestW = function(x,n1,n,ne) adaptive_permtest_os(x,n1,n,ne,signedranks,perms=10000),
+    invnormW = function(x,n1,n,ne) adaptive_invnorm_wilcoxtest_os(x,n1,n,ne),
+    permtestM = function(x,n1,n,ne) adaptive_permtest_os(x,n1,n,ne,maritzm,perms=10000))
+
+compare_tests_onesample(tests,10,20,cond_power_rule_norm,rnorm_cont,mean=1,cshift=1,csd=3)
+
+run_simulation <- function(n1,n,mean,sd,B=10,resam=100,perms=100,...){
+    results <- mclapply2(1:B,function(i) compare_adaptive_tests(n1,n,cond_power_rule_norm,rnorm,diffmean,mean=mean,sd=sd,resam=resam,perms=perms,...))
+    results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),permtestT=mean(permtestT),permtestW=mean(permtestW),invnormW=mean(invnormW),invnormT=mean(invnormT))#,npcomb=mean(npcomb),permtest=mean(permtest))
+}
+
+
+                                                              
+
+```
+
+

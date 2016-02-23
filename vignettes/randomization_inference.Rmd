@@ -1,0 +1,132 @@
+---
+title: "Randomization and permutation inference for adaptive designs"
+subtitle: "Overview"
+author: Florian Klinglmueller
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  \usepackage[utf8]{inputenc}
+---
+
+
+# Introduction
+
+In this vignette we briefly introduce the methodology underlying
+randomization and permutation inference in adaptive designs.
+
+We distinguish between randomization and permutation inference
+depending on the underlying model. We refer to randomization inference
+if the outcomes $X$ are assumed to be fixed (non-random) while treatment
+assignment $g$ is performed based on a known random mechanism. Permutation
+inference on the other hand models observations $X$ as samples from some
+(unknown) probability distribution $F$ that - under the null - is
+invariant with respect to some group of transformations $F(X) =
+F(gX)$. $G$ may be the group of permutations, rotations, or sign
+configurations.
+
+In practice the null distributions of either approach are often the
+same. Two examples, where the approaches differ would be rotation
+tests - which have no equivalence in randomization inference; or
+randomization inference in experiments with response adaptive
+randomization - which (in general) does not correspond to a group of 
+transformations.
+
+We will see that applied to adaptive designs may lead to different
+approaches depending on the type of model assumed. We will start with
+introducing randomization inference.
+
+# Randomization inference in apaptive designs
+
+Adaptive designs describe a type of experiments that are inherently
+practical as they permit to deviate from the rigid corset of
+convential experimental design that attempt to prespecify every
+possible aspect in advance. In this regard they are inherently
+difficult to fit into a probabilistic model. No wonder that it took
+more than 20 years from their first introduction until a solid
+foundation of the underlying probabilistic theory could be formulated.
+
+Here we attempt to formulate a non-parametric model for adaptive
+designs. We give two possible models: a randomization model - that
+considers the observations of the preplanned trial to be fixed and the
+treatment assignments to be random; a permutation model - that
+considers the treatment assignments fixed and the observations
+random. Whereas the first model allows us to derive a null
+distribution due to our knowledge of the random mechanism that
+determines treatment assignments; the permutation model requires
+invariance of the joint null distribution of outcomes with respect to
+a group of transformations (e.g. permutations) and allows us to derive
+a null distribution by conditioning on observations.
+
+For many randomization procedures the randomization model leads to
+experiments that are suitable for permutation inference, because
+randomization ensures and determines the structure of invariance of
+the null distribution.
+
+We think that the sampling model underlying permutation inference
+lends itself better to generalization of the inference to other data
+whereas randomization inference makes a stronger causal claim as it
+directly models the method of treatment assignment employed in the
+trial. Formulated differently the permutation test makes it easier to
+argue external validity whereas randomization tests make it easier to
+argue internal validity.
+
+# Randomization test procedure for adaptive designs
+
+
+## Adaptive p-values
+
+In a two-stage design - without early rejection boundaries - we may
+derive exact $p$-values by solving the following formula:
+
+$$
+\tilde{p} = \mbox{min}\{ \alpha: A(\alpha) \geq p^{(2)}\}
+$$
+
+where $p^{(2)}$ refers to the $p$-value of the adapted second stage
+test and $A(\alpha)$ refers to the conditional error of the preplanned
+design.
+
+If early rejection is permited and the null is rejected early the
+p-value is equal to the first stage $p$-value, otherwise it is
+
+$$
+\mbox{max}(\alpha_1,\tilde{p})
+$$
+
+where $\tilde{p}$ is as above. 
+
+
+## Confidence intervals
+
+Exact one-sided confidence intervals
+
+We use the following stage-wise ordering:
+
+Let $T^(j)_{\alpha_j}$ denote the permutation critical value at stage
+$j$ and early rejection level $\alpha_j$. E.g. $T^(1)_{\alpha_1}$ is
+the $\alpha_1$ level critical value of the permutation test performed
+with first stage data only. An the vector observed outcomes at stage
+$j$ $\bs{x}_j$ is considered more extreme than the vector of observed
+outcomes at stage $k$ $\bs{x}_k)$ if either $j < k$ with $T(\bs{x}_j)
+\geq T^{(j)}_{\alpha_j}$ or $j = k$ and $T^{j}(\bs{x}_j) >
+T^{j}(\bs{x}_k)$. Using this ordering of the sample space we define
+the p-value of the group sequential permutation test (stopping at
+stage $S$)
+
+$$
+p = P\left\{\bigcup_{j = 1}^S(T^{(j)} \geq
+T^{(j)}_{\alpha_j})\cup(T^{(S)} \geq T^{(S)}_\id)\right\}
+$$
+
+
+Better define the order based on stage-wise permutation p-values
+Here is a fundamental difference between permutation tests and
+randomization tests. In the group sequential setting we need to use
+stage-wise stratified permutations, otherwise we may put outcomes of
+patients observed in the second stage into the first stage. In this
+case however we would need to compute $T^{(1)}_{\alpha}$ differently.
+
+
+
+
