@@ -261,3 +261,217 @@ uniroot(err,c(0,10))
 
 
 ```
+
+# Group sequential procedures
+
+```{r}
+library(ldbounds)
+## Obrien Fleming type boundaries
+
+## inputs
+alpha <- bounds(c(.5,1),alpha=.025)$exit.pr
+g1 <- rep(0:1,10)
+g2 <- rep(0:1,10)
+x1 <- rnorm(20)
+x2 <- rnorm(20)
+
+
+## function
+gsd2_permtest_ts <- function(x1,x2,g1,g2,alpha,stat,permutations){
+    G <- omega(g1,g2,B= permutations)
+    dist1 <- stat(x1,G[1:length(g1),])
+    dist2 <- stat(c(x1,x2),G)
+    to1 <- stat(x1,g1)
+    to2 <- stat(c(x1,x2),c(g1,g2))
+    B <- length(dist1)
+    R1 <- rank(dist1,ties.method="min")>= B*(1-alpha[1])
+    R2 <- rep(FALSE,B)
+    R2[!R1] <- rank(dist2[!R1],ties.method="min")>= (B*(1-alpha[2]) + alpha[2]*sum(R1))
+    ## Joint rejection probability
+    list(jrp = sum(R1 | R2)/B,
+         Ta1 = min(dist1[R1]),
+         Ta2 = min(dist2[R2]),
+         to1 = to1,
+         to2 = to2,
+         decision = (to1>=Ta1|to2>=Ta2))
+}
+             
+
+gsd2_permtest_ts(x1,x2,g1,x2,alpha,meandiff,10^6)
+
+
+```
+
+# Adaptive group sequential procedures
+
+```{r}
+library(ldbounds)
+## Obrien Fleming type boundaries
+
+## inputs
+alpha <- bounds(c(.5,1),alpha=.025)$exit.pr
+g1 <- rep(0:1,10)
+g2 <- rep(0:1,10)
+gE <- rep(0:1,5)
+x1 <- rnorm(20)
+x2 <- rnorm(20)
+xE <- rnorm(10)
+
+permutations <- 10^4
+stat <- maritzm
+
+
+gsd2_permtest_ts <- function(x1,x2,xE,g1,g2,gE,alpha,stat,permutations){
+    G <- omega(g1,g2,B= permutations)
+    dist1 <- stat(x1,G[1:length(g1),])
+    dist2 <- stat(c(x1,x2),G)
+    to1 <- stat(x1,g1)
+    to2 <- stat(c(x1,x2),c(g1,g2))
+    B <- length(dist1)
+    R1 <- rank(dist1,ties.method="min")>= B*(1-alpha[1])
+    R2 <- rep(FALSE,B)
+    R2[!R1] <- rank(dist2[!R1],ties.method="min")>= (B*(1-alpha[2]) + alpha[2]*sum(R1))
+    Ta1 = min(dist1[R1])
+    Ta2 = min(dist2[R2])
+    jrp = sum(R1 | R2)/B
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations)
+    ## reuse the alpha trimmings - this may be controversial if A=0 even though the test would control the error rate
+    A <- sum(cdist>=Ta2)/length(cdist)+max(0,alpha[2]-jrp)
+    GE <- omega(c(g2,gE),B=permutations)
+    ## dirty trick to get non-finite cricital values if condiitonal error is exactly 0
+    distE <- c(stat(c(x2,xE),GE),Inf)
+    toE <- stat(c(x2,xE),c(g1,gE))
+    ## The ranks are not changed by adding Inf, but now the vector won't be empty if A = 0
+    TaE <- min(distE[rank(distE,ties.method='min') > (1-A)*(length(distE)-1)])
+    ## Joint rejection probability
+    
+    list(a1 = sum(R1)/B,
+         jrp = jrp,
+         Ta1 = Ta1,
+         TaE = TaE,
+         to1 = to1,
+         toE = toE,
+         decision = (to1>=Ta1|toE>=TaE))
+}
+             
+
+gsd2_permtest_ts(x1+g1,x2+g2,xE+gE,g1,g2,gE,alpha,meandiff,10^5)
+
+
+```
+
+# some subsetting
+
+```{r,eval=F}
+
+library(microbenchmark)
+
+
+
+select1 <- function(G,sg1){
+    tG <- t(G)     
+    colnames(tG) <- paste0('V',1:ncol(tG))
+    cond <- paste0('V',1:length(sg1),'==sg1[',1:length(sg1),']',collapse='&')
+    tG[with(data.frame(tG),eval(parse(text=cond))),]
+}
+
+select2 <- function(G,sg1){
+    tG <- t(G)     
+    merge(matrix(sg1,nr=1),tG,by=1:length(sg1))
+}
+
+select3 <- function(G,sg1){
+    tG <- as.data.table(t(G))
+    sg1 <- as.data.table(as.data.frame(matrix(sg1,nr=1)))
+    setkeyv(tG,paste0('V',1:length(sg1)))
+    setkeyv(sg1,paste0('V',1:length(sg1)))
+    tG[sg1,]                      
+}
+
+library(dplyr)
+
+select4 <- function(G,sg1){
+    inner_join(t(G) %>% as.data.frame %>% tbl_df,
+               matrix(sg1,nr=1) %>% as.data.frame %>% tbl_df,by=paste0('V',1:length(sg1)))
+}
+
+select5 <- function(G,sg1){
+    ## this may be dangerous and does not save time!!
+    suppressMessages(inner_join(t(G) %>% as.data.frame %>% tbl_df,
+                                matrix(sg1,nr=1) %>% as.data.frame %>% tbl_df))
+    
+}
+
+n1=10
+g1 <- rep(0:1,n1)
+g2 <- rep(0:1,n1)
+G <- omega(g1,g2,B=10^6)
+dim(G)
+
+sg1 <- sample(g1)
+
+dim(select1(G,sg1))
+
+microbenchmark(select1(G,sg1),
+#               select2(G,sg1),
+#               select3(G,sg1),
+               select4(G,sg1),
+               select5(G,sg1))
+
+```
+
+# Variance of Ta
+
+Most of the time we estimate Ta from a subset of all
+permutations. Then we use that as a critical value when estimating the
+conditional error. However, we estimate the conditional distribution
+using another subset of permutations.
+
+```{r,eval=F}
+
+ta <- function(x,B,alpha,stat){
+    pdist <- stat(x,omega(rep(0:1,length.out=length(x)),B=B))
+    c(Ta=min(pdist[rank(pdist,ties='min') >= (1-alpha)*B]),Tap=min(pdist[rank(pdist,ties='min') >= (1-alpha+.01)*B]),Tam=min(pdist[rank(pdist,ties='min') >= (1-alpha-.01)*B]),min=min(pdist),max=max(pdist),q1=quantile(pdist,.25),q2=quantile(pdist,.75))
+}
+
+x <- rnorm(20)
+
+ta3 <- replicate(1000,ta(x,10^3,.025,ranksum))
+ta4 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^4,.025,ranksum)))
+ta5 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^5,.025,ranksum)))
+sd(ta3[1,])
+mean(ta3[2,]-ta3[3,])
+sd(ta4[1,])
+mean(ta4[2,]-ta4[3,])
+sd(ta5[1,])
+mean(ta5[2,]-ta5[3,])
+
+ta3 <- replicate(1000,ta(x,10^3,.025,maritzm))
+ta4 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^4,.025,maritzm)))
+ta5 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^5,.025,maritzm)))
+
+sd(ta3[1,])
+mean(ta3[2,]-ta3[3,])
+sd(ta4[1,])
+mean(ta4[2,]-ta4[3,])
+sd(ta5[1,])
+mean(ta5[2,]-ta5[3,])
+
+
+ta3 <- replicate(1000,ta(x,10^3,.025,meandiff))
+ta4 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^4,.025,meandiff)))
+ta5 <- simplify2array(mclapply(1:1000,function(i) ta(x,10^5,.025,meandiff)))
+
+sd(ta3[1,])
+mean(ta3[2,]-ta3[3,])
+sd(ta4[1,])
+mean(ta4[2,]-ta4[3,])
+sd(ta5[1,])
+mean(ta5[2,]-ta5[3,])
+
+
+
+```
+
+Conclusion, using $10^4$ ($10^5$) permutations to estimate $T_\alpha$ puts
+about 10 (50) standard deviations between $T_{\alpha+1\%}$ and $T_{\alpha-1\%}$. 
