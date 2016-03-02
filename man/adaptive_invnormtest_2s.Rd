@@ -15,11 +15,9 @@ adaptive_invnormtest_2s(x, y, n1, n, ne, m1 = n1, m = n, me = ne,
 \item{n}{Pre-planned total sample size}
 
 \item{ne}{Extended sample size}
-
-\item{alpha}{}
 }
 \value{
-Logical whether the test rejects
+p-value
 }
 \description{
 Adaptive combination test of stage-wise 2 samples t-tests using the inverse normal combination function.

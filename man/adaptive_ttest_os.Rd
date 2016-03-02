@@ -15,12 +15,10 @@ adaptive_ttest_os(x, n1, n, ne, alpha = 0.025, mpfr = FALSE)
 
 \item{ne}{Extended sample size}
 
-\item{alpha}{}
-
 \item{mpfr}{Whether to use high precision numbers from \code{Rmpfr}}
 }
 \value{
-Logical whether the test rejects
+p-value
 }
 \description{
 Adaptive t-test as described in Timmesfeld et al. (2007)

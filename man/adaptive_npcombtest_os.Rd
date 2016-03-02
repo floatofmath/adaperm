@@ -21,11 +21,9 @@ adaptive_npcombtest_os(x, n1, n, ne, test_statistic,
 \item{combination_function}{Function to combine stage-wise (permutation) p-values}
 
 \item{perms}{Maximum number of permutations to use when computing permutation p-values and conditional error rates}
-
-\item{alpha}{}
 }
 \value{
-Logical whether the test rejects
+p-value
 }
 \description{
 Non-parametric combination of stage-wise test statistics. Combines stage-wise permutation p-values using some combination function; performs the test using the joint conditional permutation distribution of stage wise permutation p-values.

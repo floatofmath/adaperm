@@ -23,8 +23,6 @@ options(mc.cores=detectCores()-1)
 
 ```{r comparison function,echo=F}
 
-    
-
 
 compare_adaptive_tests <- function(n1,n,rule,rdist,test_statistic,mpfr=F,resam=100,perms=100,...){
     x <- rdist(n,...)

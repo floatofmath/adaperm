@@ -1,3 +1,61 @@
+##' Split sample of a single group experiment into stages
+##'
+##' @title Split single group sample
+##' @param x Observations
+##' @param n1 First stage sample size
+##' @param n Pre-planned total sample size
+##' @param ne Extended sample size
+##' @return list with stagewise observations and stagewise sign-indicators
+##' @author Florian Klinglmueller
+split_sample_os <- function(x,n1,n,ne=n){
+    g <- sign(x)
+    x <- abs(x)
+    if(ne>n){
+        xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
+        gs <- split(g>0,rep(1:3,c(n1,n-n1,ne-n)))
+        return(list(xs,gs))
+    } else {
+        xs <- split(x,rep(1:2,c(n1,ne-n1)))
+        xs$`3` <- numeric(0)
+        gs <- split(g>0,rep(1:2,c(n1,ne-n1)))
+        gs$`3` <- logical(0)
+        return(list(xs,gs))
+    }
+}
+
+##' Split sample of a two group experiment into stages
+##'
+##' @title Split two-group sample
+##' @param x Observations control group
+##' @param y Observations treatment group
+##' @param n1 First stage sample size
+##' @param n Pre-planned total sample size
+##' @param ne Extended sample size
+##' @param m1 First stage sample size
+##' @param m Pre-planned total sample size
+##' @param me Extended sample size
+##' @return list with stagewise observations and stagewise sign-indicators
+##' @author Florian Klinglmueller
+split_sample_ts <- function(x,y,n1,n,ne,m1,m,me){
+    if(ne>n){
+        xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
+    } else {
+        if(me>m) stop('Stages with controls only not supported')
+        xs <- split(x,rep(1:2,c(n1,ne-n1)))
+        xs[[3]] <- numeric(0)
+    }
+    if(me>m){
+        ys <- split(y,rep(1:3,c(m1,m-m1,me-m)))
+    } else {
+        if(ne>n) stop('Stages with treatments only not supported')
+        ys <- split(y,rep(1:2,c(m1,me-m1)))
+        ys[[3]] <- numeric(0)
+    }
+    gs <- lapply(1:length(xs),function(i) rep(0:1,c(length(xs[[i]]),length(ys[[i]]))))
+    xs <- lapply(1:length(xs),function(i) c(xs[[i]],ys[[i]]))
+    return(list(xs,gs))
+}
+
 ##' Make contrast matrix for all (pairwise) many-to-one comparisons
 ##'
 ##' @param g Vector of treatment assignments

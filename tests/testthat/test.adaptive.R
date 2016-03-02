@@ -40,3 +40,7 @@ test_that("Compute fractions of large numbers",{
                                 (sqrt(pi)*sqrt(g)*gamma((tg-1)/2)*sqrt(tg-g)*gamma((tg-g-1)/2)*(ptuu_2-ptuu_1^2/tg)^((tg-3)/2))),
                  tolerance=0.0001)
 })
+
+
+out <- replicate(1000,{x <- rnorm(20)
+                       c(adaptive_permtest_os(x,10,15,20,maritzm)<=.025,adaperm:::adaptive_DR_os(x,10,15,20,maritzm))})

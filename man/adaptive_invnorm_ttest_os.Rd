@@ -14,11 +14,9 @@ adaptive_invnorm_ttest_os(x, n1, n, ne, alpha = 0.025)
 \item{n}{Pre-planned total sample size}
 
 \item{ne}{Extended sample size}
-
-\item{alpha}{}
 }
 \value{
-Logical whether the test rejects
+p-value
 }
 \description{
 Adaptive combination test of stage-wise t-tests using the inverse normal combination function.

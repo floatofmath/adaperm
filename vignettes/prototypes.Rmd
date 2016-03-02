@@ -420,6 +420,88 @@ microbenchmark(select1(G,sg1),
 
 ```
 
+# Conditional error of the randomized test
+
+Typically the randomized decision rule of the permutation test is
+defined as
+
+$$
+\phi = \left\{\begin{array}{ll} 1 & \mbox{if} T_o > T_\alpha \\
+\gamma & \mbox{if} T_o = T_\alpha \\
+0 & otherwise
+\end{array}\right.
+$$
+
+where $T_\alpha$ is the $\lceil (1-\alpha) * |G|\rceil$ order
+statistic (using the minimum rank for ties) of the orbit $\{T(x): x
+\in S(x)\}$ and $\gamma$ is defined as
+
+$$
+\frac{\alpha - P(T > T_\alpha)}{P(T=T_\alpha)}.
+$$
+
+The corresponding conditional error function is then
+
+$$
+A_R'=A' + \gamma P(T>T_\alpha| x_{|n_1} ).
+$$
+
+
+If either the $T_\alpha$ or the conditional permutation distribution
+given the first stage observations are estimated using Monte-Carlo
+permutation algorithm, it may be convenient to compute the conditional
+error function of a slightly different randomized decision rule, which
+flips a coin for all values of the test statistic falling within
+$\epsilon$ of the critical value:  
+
+$$
+\phi_\epsilon = \gamma \mbof{if} T_o \in [T_\alpha - \epsilon,T_\alpha).
+$$  
+
+In this case $\gamma$ is given by
+
+$$
+\gamma = \frac{\alpha - P(T > T_\alpha)}{P(T \in [T_\alpha-\epsilon,T_\alpha))}
+$$
+
+which can be easily computed even for a Monte Carlo sample from the permutation space.
+And the conditional error function is:
+
+$$
+A'_\eplsilon = A' + P(T \in [T_\alpha-\epsilon,T_\alpha)|x_{|n_1})\frac{\alpha - P(T > T_\alpha)}{P(T \in [T_\alpha-\epsilon,T_\alpha))}
+$$  
+
+For $\epsilon \rightarrow \infty$ one gets:
+
+$$
+A'_\infty = A' + (1-A')\frac{\alpha - P(T >T_\alpha)}{1-P(T > T_\alpha)}
+$$
+
+Alternatively one may use the conditional error function:
+
+$$
+A_t'= A' + (\alpha - P(T> T_\alpha))
+$$  
+
+which is also valid.
+
+It can be easily seen that  
+
+$$
+E((1-A')\frac{\alpha - P(T >T_\alpha)}{1-P(T > T_\alpha)}) = (\alpha - P(T> T_\alpha)).
+$$  
+
+More interesting one sees that $\phi_t$ uses a constant randomization probability for all $T_o \leq T_\alpha$ whereas $\phi_t$ adds relatively more to the unrandomized conditional error for outcomes with larger conditional error rates, and less otherwise. Consequently using $A_t'$ makes more sense; using $A_R'$ makes probably most sense.
+
+```{r}
+
+```
+
+
+
+
+
+
 # Variance of Ta
 
 Most of the time we estimate Ta from a subset of all
@@ -475,3 +557,17 @@ mean(ta5[2,]-ta5[3,])
 
 Conclusion, using $10^4$ ($10^5$) permutations to estimate $T_\alpha$ puts
 about 10 (50) standard deviations between $T_{\alpha+1\%}$ and $T_{\alpha-1\%}$. 
+
+## Is it faster to perform the test or to compute the p-value
+
+
+```{r}
+library(microbenchmark)
+
+microbenchmark(adaptive_permtest_os(rnorm(20),10,15,20,maritzm),adaptive_permtest2_os(rnorm(20),10,15,20,maritzm))
+## hm interestingly the p-value based test is slower by about 30%, I
+## don't understand why though
+
+
+```
+
