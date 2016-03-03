@@ -112,8 +112,8 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
   cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   m <- length(dist)
   talpha <- min(dist[rank(-dist,ties.method='max') <= (alpha*m)])
-  trimmings <- trimmings(g1,g2,restricted,alpha)
-  cer1 <- mean(cdist>=talpha)+trimmings
+#  trimmings <- trimmings(g1,g2,restricted,alpha)
+  cer1 <- mean(cdist>=talpha) #+trimmings
   return(cer1)
 }
 

@@ -52,7 +52,7 @@ adaptive_permtest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,re
     ## observed test statistic of adapted test
     t2 <- stat(c(x2,xE),c(g2,gE))
     ## adaptive p-value 
-    pval <- sum(pdist >= quantile(cdist,sum(edist<t2)/length(edist)))/length(pdist)
+    pval <- mean(pdist >= quantile(cdist,mean(edist<t2),type=1))
     pval
 }
 
