@@ -9,14 +9,21 @@ vignette: >
   \usepackage[utf8]{inputenc}
 ---
 
-```{r}
+```{r,echo=F,results='hide'}
+knitr::opts_chunk$set(eval=FALSE,echo=FALSE,warning=FALSE,results='hide',fig.width=7,fig.height=7,message=FALSE)
+```
+
+
+```{r,eval=T}
 library(magrittr)
 library(plyr)
 library(dplyr)
+library(microbenchmark)
 library(pander)
 library(parallel)
 library(bt88.03.704)
-library(adaperm)
+library(adaperm)                                        #devtools::install_github('floatofmath/adaperm')
+library(ldbounds)
 options(mc.cores=detectCores()-1)
 ```
 
@@ -38,7 +45,7 @@ preplanned test given the first stage treatment assignments:
 This is easily computed:
 
 ```{r}
-
+    
 sim_pvals <- function(B,delta,nulldist=rnorm,...){
     replicate(B,{
                   x1 <- nulldist(10,...)+rep(0:1,5)*delta
@@ -205,29 +212,104 @@ abline(v=t2)
 
 ```{r}
 
-
-adaptive_permtest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000){
-    pdist  <- perm_dist(x1,x2,g1,g2,stat,B=permutations)
-    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,B=permutations)
-    edist <- perm_dist(x2,xE,g2,gE,stat,B=permutations)
-    t2 <- stat(c(x2,xE),c(g2,gE))
-    pval <- sum(pdist>=quantile(cdist,sum(edist<t2)/length(edist)))/length(pdist)
-    pval
+##' Permutation test p-value
+##'
+##' Type "non-randomized" will give the standard p-value, which is define by the proportion of sample permutations with larger or equal test statistic than the observed one. "midp" will give the mid-p value which is the proportion of sample permutations with larger test statistic plus one half the proportion of permutations with equal test statistic. "randomized" will return the proportion of permutations with larger test statistic plus a random number that is uniformly distributed between zero and the proportion of permutations with test statistic equal to the observed.
+##' 
+##' @title Permutation p-value
+##' @param t 
+##' @param dist 
+##' @param type 
+##' @return p-value
+##' @author Florian Klinglmueller
+t2p  <- function(t,dist,type=c('non-randomized','midp','randomized')){
+    switch(type[1],
+           'non-randomized'=mean(dist>=t),
+           'midp'=mean(dist>t) + .5*mean(dist==t),
+           'randomized'=mean(dist>t) + runif(1)*mean(dist==t))
 }
 
 
+##' Level alpha critical boundary of permutation test
+##'
+##' For type 'non-randomized' this returns the smallest unique value of the permutation distribution such that the proportion of statistics larger is smaller than alpha. Type 'randomized' is currently not working but should give the critila value of a randomized test with exact level p.
+##' 
+##' @title p to t
+##' @param p p-value/alpha level
+##' @param dist permutation distribution
+##' @param type see details
+##' @return critical value
+##' @author Florian Klinglmueller
+p2t <- function(p,dist,type=c('non-randomized')){#,'randomized')){
+    type <- type[1]
+    n <- length(dist)
+    ta <- max(dist[rank(-dist,ties='min') >= p*length(dist)])
+    switch(type,
+           'non-randomized'= ta)#,
+#           'randomized' = ta - (p-floor(p*n)/n)/2
+}
+
+
+    
+perm_DR <- function (x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
+                       restricted,
+                       type=c('non-randomized','randomized','midp'),alpha) 
+{
+    perm_test(x1,x2,g1,g2,stat,B,x3,g3,restricted,type)<=alpha
+}
+
+perm_test <- function (x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
+                       restricted,
+                       type=c('non-randomized','randomized','midp')) 
+{
+    dist <- perm_dist(x1, x2, g1, g2, stat, B, x3, g3, restricted = restricted)
+    t <- stat(c(x1, x2, x3), c(g1, g2, g3))
+    switch(type[1],
+           'non-randomized'=t2p(t,dist,type="non-randomized"),
+           'randomized'= t2p(t,dist,type="randomized"),
+           'midp'=t2p(t,dist,type="midp"))
+}
+
+
+
+adaptive_permtest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted){
+    pdist <- perm_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    edist <- perm_dist(x2,xE,g2,gE,stat,B=permutations,restricted=restricted)
+    t2 <- stat(c(x2,xE),c(g2,gE))
+    pval <- mean(pdist >= quantile(cdist, mean(edist<t2),type=1))
+    pval
+}
+
+bisect <- function(err,start,end,tolerance,maxit){
+    l <- err(start)
+    u <- err(end)
+    if(sign(l*u)>0) stop('err() values at end points not of opposite sign')
+    if(maxit<1) {
+        warning('Bisection reached maximum number of iterations')
+        return(err((end-start)/2))
+    }
+    m <- err((end-start)/2)
+    if(m==0|abs(m) < tolerance) return(start-end)
+    if(sign(u*m)>0){
+        bisect(err,start,(end-start)/2,tolerance,maxit-1)
+    } else {
+        bisect(err,(end-start)/2,end,tolerance,maxit-1)
+    }
+}
+
 adaptive_permtest_ts <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,conf_level=.05){
-    pval <- adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,stat,permutations=10000)
+    pval <- adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted=T)
     err <- function(d,conf_level=.5){
         x1 <- x1-d*g1
         x2 <- x2-d*g2
         xE <- xE-d*gE
-        adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,stat,permutations=10000)-conf_level
+        adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted=T)-conf_level
     }
     t2 <- stat(c(x2,xE),c(g2,gE))
     names(t2) <- deparse(substitute(stat))
     ## rms
-    guesstimate <- sqrt(mean(c(x1,x2,xE)^2))*sign(.5-pval)
+    guesstimate <- 2*sqrt(mean(c(x1,x2,xE)^2))*sign(.5-pval)
     estimate <- c("constant additive effect"=uniroot(err,c(0,guesstimate))$root)
     conf.int <- c(uniroot(err,c(0,guesstimate*sign(conf_level-pval)),conf_level=conf_level)$root,Inf)
     attr(conf.int,"conf.level") <- 1-conf_level
@@ -250,14 +332,14 @@ gE <- rep(0:1,3)
 x1 <- rnorm(10)+g1
 x2 <- rnorm(10)+g2
 xE <- rnorm(6)+gE
+adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,maritzm,perm=10000,restricted=T)
 
+t.test(-c(x1,x2,xE)~c(g1,g2,gE),alternative='greater')
 adaptive_permtest_ts(x1,x2,xE,g1,g2,gE,maritzm,perm=10000)
 adaptive_permtest_ts(x1,x2,xE,g1,g2,gE,ranksum,perm=10000)
 adaptive_permtest_ts(x1,x2,xE,g1,g2,gE,meandiff,perm=10000)
 
-t.test(c(x1,x2,xE)~c(g1,g2,gE))
-err(100)
-uniroot(err,c(0,10))
+
 
 
 ```
@@ -265,7 +347,7 @@ uniroot(err,c(0,10))
 # Group sequential procedures
 
 ```{r}
-library(ldbounds)
+
 ## Obrien Fleming type boundaries
 
 ## inputs
@@ -287,10 +369,12 @@ gsd2_permtest_ts <- function(x1,x2,g1,g2,alpha,stat,permutations){
     R1 <- rank(dist1,ties.method="min")>= B*(1-alpha[1])
     R2 <- rep(FALSE,B)
     R2[!R1] <- rank(dist2[!R1],ties.method="min")>= (B*(1-alpha[2]) + alpha[2]*sum(R1))
+    Ta1 = min(dist1[R1])
+    Ta2 = min(dist2[R2])
     ## Joint rejection probability
     list(jrp = sum(R1 | R2)/B,
-         Ta1 = min(dist1[R1]),
-         Ta2 = min(dist2[R2]),
+         Ta1 = Ta1,
+         Ta2 = Ta2,
          to1 = to1,
          to2 = to2,
          decision = (to1>=Ta1|to2>=Ta2))
@@ -305,7 +389,7 @@ gsd2_permtest_ts(x1,x2,g1,x2,alpha,meandiff,10^6)
 # Adaptive group sequential procedures
 
 ```{r}
-library(ldbounds)
+
 ## Obrien Fleming type boundaries
 
 ## inputs
@@ -364,7 +448,7 @@ gsd2_permtest_ts(x1+g1,x2+g2,xE+gE,g1,g2,gE,alpha,meandiff,10^5)
 
 ```{r,eval=F}
 
-library(microbenchmark)
+
 
 
 
@@ -388,7 +472,7 @@ select3 <- function(G,sg1){
     tG[sg1,]                      
 }
 
-library(dplyr)
+
 
 select4 <- function(G,sg1){
     inner_join(t(G) %>% as.data.frame %>% tbl_df,
@@ -426,9 +510,9 @@ Typically the randomized decision rule of the permutation test is
 defined as
 
 $$
-\phi = \left\{\begin{array}{ll} 1 & \mbox{if} T_o > T_\alpha \\
-\gamma & \mbox{if} T_o = T_\alpha \\
-0 & otherwise
+\phi = \left\{\begin{array}{ll} 1 & \mbox{if}\; T_o > T_\alpha \\
+\gamma & \mbox{if}\; T_o = T_\alpha \\
+0 & \mbox{otherwise.}
 \end{array}\right.
 $$
 
@@ -443,7 +527,7 @@ $$
 The corresponding conditional error function is then
 
 $$
-A_R'=A' + \gamma P(T>T_\alpha| x_{|n_1} ).
+A_R'=A' + \gamma P(T = T_\alpha| x_{|n_1} ).
 $$
 
 
@@ -455,7 +539,7 @@ flips a coin for all values of the test statistic falling within
 $\epsilon$ of the critical value:  
 
 $$
-\phi_\epsilon = \gamma \mbof{if} T_o \in [T_\alpha - \epsilon,T_\alpha).
+\phi_\epsilon = \gamma \mbox{if}\; T_o \in [T_\alpha - \epsilon,T_\alpha).
 $$  
 
 In this case $\gamma$ is given by
@@ -494,13 +578,233 @@ $$
 More interesting one sees that $\phi_t$ uses a constant randomization probability for all $T_o \leq T_\alpha$ whereas $\phi_t$ adds relatively more to the unrandomized conditional error for outcomes with larger conditional error rates, and less otherwise. Consequently using $A_t'$ makes more sense; using $A_R'$ makes probably most sense.
 
 ```{r}
+x <- rep(1,4)
+n1 <- 2
+n <- 4
+ne <- length(x)
+perms=1000
+alpha=2/16
+test_statistic=sumdiff
+options(mc.cores=detectCores()-2)
+exact <- {perms>=2^n}
+obs <- adaperm:::split_sample_os(x,n1,n,ne)
+xs <- obs[[1]]
+gs <- obs[[2]]
+pdist <- adaperm:::perm_dist(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,perms,restricted=FALSE)
+table(pdist)
+cdist <- adaperm:::cond_dist(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,perms,restricted=FALSE)
+table(cdist)
+
+t_alpha <- max(pdist[rank(-pdist,ties='min') >= alpha*length(pdist)])
+t_eps <- max(pdist[rank(-pdist,ties='min') >= alpha*(length(pdist)-1)])
+
+
+trimmings <- alpha - mean(pdist > t_alpha)
+aprime <- mean(cdist>t_alpha)
+aR <- aprime + mean(cdist==t_alpha)*trimmings/mean(pdist == t_alpha) 
+
+aprime <- permutation_CER(xs[[1]],gs[[1]],xs[[2]],test_statistic,perms,alpha,gs[[2]],restricted=FALSE)
+
+permutation_cer_os <- function(x,n1,n,test_statistic,perms=50000,alpha=0.025,verbose=FALSE,epsilon=0){
+    exact <- {perms>=2^n}
+    ne <- length(x)
+    obs <- adaperm:::split_sample_os(x,n1,n,ne)
+    xs <- obs[[1]]
+    gs <- obs[[2]]
+    pdist <- adaperm:::perm_dist(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,perms,restricted=FALSE)
+    cdist <- adaperm:::cond_dist(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,perms,restricted=FALSE)
+    t_alpha <- max(pdist[rank(-pdist,ties='max') >= alpha*length(pdist)])
+    if(epsilon==Inf){
+        t_eps <- -Inf
+    } else {
+        t_eps <- sort(unique(pdist[pdist<t_alpha]),decreasing=TRUE)[epsilon]
+    }
+    trimmings <- alpha - mean(pdist > t_alpha)
+    aprime <- mean(cdist>t_alpha)
+    if(exact&epsilon==0){
+        ## a_r
+        A <- aprime + mean(cdist==t_alpha)*trimmings/mean(pdist == t_alpha) 
+    } else {
+        ## a_epsilon
+        A <- aprime + mean(cdist <= t_alpha & cdist >= t_eps)*trimmings/mean(pdist <= t_alpha & pdist >= t_eps)
+    }
+    if(verbose){
+        return(c(A,aprime+trimmings,aprime))
+    } else {
+        return(A)
+    }
+}
+
+
+
+
+adist <- function(x,n1,n,test_statistic,perms=50000,alpha=0.025,epsilon=0){
+    x <- abs(x)
+    x2 <- x[(n1+1):n]
+    G <- (omega(rep(1,n1),restricted=F,B=perms)*2-1)
+    s <- test_statistic(G,rep(1,n1))
+    rbind(s,apply(G,2,function(i) permutation_cer_os(c(i[1:n1],x2),n1,n,test_statistic,perms,alpha,verbose=TRUE,epsilon=0)))
+}
+
+foo <- adist(rep(1,4),2,4,sumdiff,,alpha=1/8,epsilon=0)
+
+apply(foo[-1,],1,function(b) colSums(t(matrix(rep(pnorm(rnorm(10,mean=2),lower=F),4),ncol=4)) <= b))
+
+
+n <- 2*5
+G <- (e1071::bincombinations(n)*2)-1
+rowMeans(Adist <- apply(G,1,function(x) permutation_cer_os(x,n/2,n,sumdiff,alpha=.025,verbose=T,epsilon=0)))
+
+n <- 2*8
+G <- (e1071::bincombinations(n)*2)-1
+
+system.time(rowMeans(Adist <- simplify2array(mclapply2(1:nrow(G),function(i) permutation_cer_os(G[i,],n/2,n,sumdiff,alpha=.025,verbose=T,epsilon=0,perms=10^6)))))
+rowMeans(Adist)
+
+
+Gnorm <- t(t(G)*abs(rnorm(n)))
+rowMeans(Adist_norm <- simplify2array(mclapply2(1:nrow(G),function(i) permutation_cer_os(Gnorm[i,],n/2,n,sumdiff,alpha=.025,verbose=T,epsilon=0,perms=10^6))))
+
+
+```
+The non-randomized conditional error function looses a lot in size
+when applied to discrete outcomes. For continous data, the loss with 8
+observations per group is tiny.
+
+# Expected/Mid-p values
+
+```{r}
+midp_test <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted){
+    cdist <- perm_dist(x1,x2,g1,g2,stat=test_statistic,B=B,x3=x3,g3=g3,restricted=restricted)
+    tobs <- test_statistic(c(x1,x2,x3),c(g1,g2,g3))
+    mean(cdist>tobs) + .5 * mean(cdist == tobs)
+}
+
+x <- rep(1,4)
+midp_test_os(x,sumdiff)
+x1 <- c(1,1)
+x2 <- c(1,1)
+xE <- c(1,1)
+g1 <- c(1,1)
+g2 <- c(1,1)
+gE <- c(1,-1)
+stat <- sumdiff
+restricted=F
+permutations = 10000
+
+
+adaptive_midptest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted=T){
+    ## permutation distribution of preplanned test
+    pdist  <- perm_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    f_pdist <- plyr::count(pdist) %>%
+        mutate(dens=freq/length(pdist),cdf=1-cumsum(dens))
+    ## conditional distribution of preplanned test given the first stage data
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    f_cdist <- plyr::count(cdist) %>%
+        mutate(cdens=freq/length(cdist),ccdf=1-cumsum(cdens))
+    ## permutation distribution of adapted test
+    edist <- perm_dist(x2,xE,g2,gE,stat,B=permutations,restricted=restricted)
+    f_edist <- plyr::count(edist) %>%
+        mutate(edens=freq/length(edist),ecdf=1-cumsum(edens))
+    ## observed test statistic of adapted test
+    t2 <- stat(c(x2,xE),c(g2,gE))
+    ## adaptive p-value
+    mid_p2 <- mean(edist>t2)+1/2*mean(edist==t2)
+    df <- plyr::join(f_pdist,f_cdist,by=x,type='left')
+    ## smallest level where one would reject for sure
+    is <- with(df,min(cdf[!is.na(ccdf) & ccdf>=mid_p2]))
+    ## smallest level where one would not reject anymore
+    iss <- with(df,max(cdf[!is.na(ccdf) & ccdf<=mid_p2]))
+    ## mid-p value 
+    pval <- (is+iss)/2
+    pval
+}
+
+adaptive_midptest_os <- function (x, n1, n, ne, test_statistic, alpha = 0.025) 
+{
+    if(n>25){
+        stop("Exact distribution not available for n>25 observations")
+    }
+    perms = 2^n+1
+    obs <- adaperm:::split_sample_os(x, n1, n, ne)
+    if (ne > n) {
+        xs <- obs[[1]]
+        gs <- obs[[2]]
+        return(adaptive_midptest_quick(xs[[1]], xs[[2]], xs[[3]], 
+            gs[[1]], gs[[2]], gs[[3]], test_statistic, restricted = FALSE, 
+            perms))
+    }
+    else {
+        xs <- obs[[1]]
+        gs <- obs[[2]]
+        return(midp_test(xs[[1]], xs[[2]], gs[[1]], gs[[2]], 
+            test_statistic, restricted = FALSE, B = perms))
+    }
+}
+
+
+## test
+B <- 10000
+X <- matrix(sample(c(-1,1),20*B,rep=T),ncol=B)
+Xnorm <- matrix(rnorm(20*B),ncol=B)
+
+pvals_midp <- unlist(mclapply2(1:B,function(i) adaptive_midptest_os(X[,i],n1=8,n=16,ne=20,maritzm,alpha=.05)))
+pvals_perm <- unlist(mclapply2(1:B,function(i) adaptive_permtest_os(X[,i],n1=8,n=16,ne=20,maritzm,alpha=.05)))
+pvals_midp_norm <- unlist(mclapply2(1:B,function(i) adaptive_midptest_os(Xnorm[,i],n1=8,n=16,ne=20,maritzm,alpha=.05)))
+pvals_perm_norm <- unlist(mclapply2(1:B,function(i) adaptive_permtest_os(Xnorm[,i],n1=8,n=16,ne=20,maritzm,alpha=.05,perms=10^6)))
+
+mean(pvals_midp<.05)
+mean(pvals_perm<.05)
+
+mean(pvals_midp_norm > pvals_perm_norm)
+mean(pvals_midp_norm < pvals_perm_norm)
+mean(pvals_midp_norm<.05)
+mean(pvals_perm_norm<.05)
+
+out <- adaperm:::split_sample_os(Xnorm[,3],8,16,20)
+pdist <- perm_dist(out[[1]][[1]],out[[1]][[2]],out[[2]][[1]],out[[2]][[1]],maritzm,restricted=F,B=10^6)
+cdist <- adaperm:::cond_dist(out[[1]][[1]],out[[1]][[2]],out[[2]][[1]],out[[2]][[1]],maritzm,restricted=F,B=10^6)
+edist <- perm_dist(out[[1]][[2]],out[[1]][[3]],out[[2]][[2]],out[[2]][[3]],maritzm,restricted=F,B=10^6)
+stat1 <- maritzm(c(out[[1]][[1]],out[[1]][[2]]),c(out[[2]][[1]],out[[2]][[2]]))
+stat2 <- maritzm(c(out[[1]][[2]],out[[1]][[3]]),c(out[[2]][[2]],out[[2]][[3]]))
+
+c(t2p(stat1,pdist)>t2p(stat1,pdist,'midp'))
+c(t2p(stat2,pdist)>t2p(stat2,pdist,'midp'))
+permutation_cer_os(Xnorm[,3],8,16,maritzm,perms=10^6)
+permutation_CER(out[[1]][[2]],out[[2]][[1]],out[[1]][[2]],stat=maritzm,g2=out[[2]][[2]],restricted=F,perm=10^6)
+
+## reject if 
+mean(pdist >= quantile(cdist, mean(edist < stat2), type = 1))
+mean(edist < stat2)
+1-mean(edist>=stat2)
+mean(edist>=stat2)
+
+t2p(stat2,edist,'midp')
+
+t2p(stat2,edist)
+mean(pdist >= quantile(cdist, mean(edist < stat2),type=1))
+mean(pdist > quantile(cdist, mean(edist <= stat2) - .5*mean(edist==stat2),type=1)) +
+    .5* mean(pdist == quantile(cdist, mean(edist <= stat2) - .5*mean(edist==stat2),type=1))
+
+adaptive_permtest_os(Xnorm[,3],n1=8,n=16,ne=20,maritzm,alpha=.05,perms=10^6)
+
+mean(pdist >= quantile(cdist, mean(edist > stat2) + .5 * mean(edist==stat2), type = 1))
+mean(pdist > quantile(cdist, mean(edist > stat2) + .5 * mean(edist==stat2), type = 1))
+
+adaptive_midptest_os(Xnorm[,3],n1=8,n=16,ne=20,maritzm,alpha=.05)
+
+
 
 ```
 
+The midp midp value of the adaptive permutation test is still
+off. Here is a conjecture
 
+```
+mean(pdist > quantile(cdist, mean(edist <= stat2) - .5*mean(edist==stat2),type=1)) +
+    .5* mean(pdist == quantile(cdist, mean(edist <= stat2) - .5*mean(edist==stat2),type=1))
 
-
-
+```
 
 # Variance of Ta
 
