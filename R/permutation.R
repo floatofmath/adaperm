@@ -187,9 +187,42 @@ perm_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
     stat(c(x1,x2,x3),omega)
 }
 
+##' Permutation test p-value
+##'
+##' Type "non-randomized" will give the standard p-value, which is define by the proportion of sample permutations with larger or equal test statistic than the observed one. "midp" will give the mid-p value which is the proportion of sample permutations with larger test statistic plus one half the proportion of permutations with equal test statistic. "randomized" will return the proportion of permutations with larger test statistic plus a random number that is uniformly distributed between zero and the proportion of permutations with test statistic equal to the observed.
+##' 
+##' @title Permutation p-value
+##' @param t observed test statistic
+##' @param dist permutation distribution
+##' @param type type of p-value to compute
+##' @return p-value
+##' @author Florian Klinglmueller
+t2p  <- function(t,dist,type=c('non-randomized','midp','randomized','davison_hinkley')){
+    switch(type[1],
+           'non-randomized'=mean(dist>=t),
+           'midp'=mean(dist>t) + .5*mean(dist==t),
+           'randomized'=mean(dist>t) + runif(1)*mean(dist==t),
+           'davison_hinkley'=(sum(dist>t)+1)/(sum(dist!=t)+1))
+}
+
+
+##' Level alpha critical boundary of permutation test. Returns the smallest unique value of the permutation distribution such that the proportion of statistics larger is smaller than alpha. 
+##' 
+##' @title p to t
+##' @param p p-value/alpha level
+##' @param dist permutation distribution
+##' @return critical value
+##' @author Florian Klinglmueller
+p2t <- function(p,dist)
+    max(dist[rank(-dist,ties='min') >= p*length(dist)])
+}
+
+
 
 ##' Perform a permutation test (stratified by stages)
 ##'
+##' \code{type} specifies which permutation p-value to use. "non-randomized" will use the p-value of the non-randomized permutation test. "randomized" will use a randomized p-value that subtracts a random quantity from the non-randomized p-value, such that the a test that rejects for \code{p <= alhpa} has size exactly \code{alpha}. "midp" computes the mid-p-value which is the expected value of the randomized p-value. Davison-Hinkley returns the fraction between the permutation test statistics larger than \code{t} plus one and the permutation test statistics different from \code{t} plus one. The latter is mostly usefull when not all possible permutations are used. 
+##' 
 ##' @title perform permutation test
 ##' @param x1 First stage observations
 ##' @param x2 Second stage observations
@@ -200,15 +233,20 @@ perm_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
 ##' @param x3 Third stage observations
 ##' @param g3 Third stage group assignments
 ##' @param restricted Should group sizes be considered fixed
-##' @param ... further arguments to perm_dist
+##' @param type Type of p-value to compute (see details)
 ##' @return p-value of the permutation test
 ##' @author Florian Klinglmueller
 ##'
 ##' @export
-perm_test <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted,...){
-    cdist <- perm_dist(x1,x2,g1,g2,stat,B,x3,g3,restricted=restricted,...)
-    mean(cdist>=stat(c(x1,x2,x3),c(g1,g2,g3)))
+perm_test <- function (x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
+                       restricted,
+                       type=c('non-randomized','randomized','midp','davison_hinkley')) 
+{
+    dist <- perm_dist(x1, x2, g1, g2, stat, B, x3, g3, restricted = restricted)
+    t <- stat(c(x1, x2, x3), c(g1, g2, g3))
+    t2p(t,dist,type[1])
 }
+
 
 ##' Perform an adaptive permutation test
 ##'

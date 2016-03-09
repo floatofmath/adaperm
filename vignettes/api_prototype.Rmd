@@ -1,0 +1,140 @@
+---
+title: "Permutation tests for adaptive designs"
+subtitle: "Prototypes for API"
+author: Florian Klinglmueller
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  \usepackage[utf8]{inputenc}
+---
+
+
+There are two ways to perform a test following an adaptive design:
+
+1. Using a decision rule that compares the conditional error to
+   the second stage p-value
+2. Using an adjustde p-value which is then compared to the overall
+   significance level
+
+
+
+# Decision rules
+
+Decision rules permit us to decouple computation of the conditional
+error rate from the adapted second stage test. This simplifies
+switching between different types of conditional error rate
+computations.
+
+We implement several ways to compute the conditonal error rate of the
+pre-planned permutation test:
+
+1. Non-randomized: this is the conditional error rate of the standard
+   non-randomized permutation test. Depending on the discreteness of
+   the permutation distribution this test will be strictly
+   conservative. 
+2. Randomized: this is the conditional error rate of the standard
+   randomized permutation test. Which rejects for the same samples as
+   the non-randomized test; on the border of the rejection region one
+   rejects with probability $\gamma$ such that the test has size
+   exactly $\alpha$.
+3. Uniform: this is the conditional error rate of the non-randomized
+   test plus the difference in size of the non-randomized and the
+   significance level $\alpha$
+   
+
+
+```{r}
+library(adaperm)
+
+
+##' Permutation test p-value
+##'
+##' Type "non-randomized" will give the standard p-value, which is define by the proportion of sample permutations with larger or equal test statistic than the observed one. "midp" will give the mid-p value which is the proportion of sample permutations with larger test statistic plus one half the proportion of permutations with equal test statistic. "randomized" will return the proportion of permutations with larger test statistic plus a random number that is uniformly distributed between zero and the proportion of permutations with test statistic equal to the observed.
+##' 
+##' @title Permutation p-value
+##' @param t 
+##' @param dist 
+##' @param type 
+##' @return p-value
+##' @author Florian Klinglmueller
+t2p  <- function(t,dist,type=c('non-randomized','midp','randomized','davison_hinkley')){
+    switch(type[1],
+           'non-randomized'=mean(dist>=t),
+           'midp'=mean(dist>t) + .5*mean(dist==t),
+           'randomized'=mean(dist>t) + runif(1)*mean(dist==t),
+           'davison_hinkley'=(sum(dist>t)+1)/(sum(dist!=t)+1))
+}
+
+
+##' Level alpha critical boundary of permutation test. Returns the smallest unique value of the permutation distribution such that the proportion of statistics larger is smaller than alpha. 
+##' 
+##' @title p to t
+##' @param p p-value/alpha level
+##' @param dist permutation distribution
+##' @return critical value
+##' @author Florian Klinglmueller
+p2t <- function(p,dist)
+    max(dist[rank(-dist,ties='min') >= p*length(dist)])
+}
+
+
+
+
+perm_test <- function (x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
+                       restricted,
+                       type=c('non-randomized','randomized','midp','davison_hinkley')) 
+{
+    dist <- perm_dist(x1, x2, g1, g2, stat, B, x3, g3, restricted = restricted)
+    t <- stat(c(x1, x2, x3), c(g1, g2, g3))
+    t2p(t,dist,type[1])
+}
+
+permutation_cer <- function(x1,x2,
+                            g1,nt2=floor(length(x2)/2),
+                            test_statistic,
+                            alpha,
+                            permutations,
+                            restricted,
+                            cer_type=c("non-randomized","randomized","uniform")){
+    n1 <- length(x1)
+    n <- length(c(x1,x2))
+    n2 <- n-n2
+    g2 <- rep(0:1,each=nt2)
+    pdist <- adaperm:::perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    M <- length(dist)
+    talpha <- p2t(alpha,pdist)
+    A  <- mean(cdist > talpha)
+    trimmings <- switch(cer_type[1],
+                        'non-randomized' = 0,
+                        'randomized' = mean(cdist==talpha) * (alpha - mean(pdist > talpha)) / mean(pdist==talpha),
+                        'uniform' = (alpha - mean(pdist > talpha)))
+    A + trimmings
+}
+    
+adpative_dr <- function(x1,x2,xE,
+                        g1,g2,gE,
+                        test_statistic,
+                        alpha,
+                        permutations,
+                        restricted,
+                        atest_type=c("non-randomized","mid-p","davison_hinkley","CER"),
+                        cer_type=c("non-randomized","randomized","uniform")){
+    A <- permutation_cer(x1,x2,
+                         g1,sum(g2>0),
+                         test_statistic,
+                         alpha,
+                         permutations,
+                         restricted,
+                         cer_type)
+    if(atest_type == 'CER'){
+        return(A)
+    } else {
+        return(A >= perm_test(x2,xE,g2,gE,test_statistic,permutations,restricted=restricted,type=atest_type))
+    }
+}
+
+
+    
+```

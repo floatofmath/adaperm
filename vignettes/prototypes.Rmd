@@ -241,10 +241,9 @@ t2p  <- function(t,dist,type=c('non-randomized','midp','randomized')){
 ##' @return critical value
 ##' @author Florian Klinglmueller
 p2t <- function(p,dist,type=c('non-randomized')){#,'randomized')){
-    type <- type[1]
     n <- length(dist)
     ta <- max(dist[rank(-dist,ties='min') >= p*length(dist)])
-    switch(type,
+    switch(type[1],
            'non-randomized'= ta)#,
 #           'randomized' = ta - (p-floor(p*n)/n)/2
 }

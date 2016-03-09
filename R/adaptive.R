@@ -84,7 +84,7 @@ z_test <- function(x1,x2,g1,g2,sigma=1,x3=NULL,g3=NULL){
 ##'
 ##' For the moment, we assume that observations are randomized using random allocation blocked by stages, (i.e. we resample using \code{sample (g1)}). \code{g2} does not have to be the actual second stage treatment assignments but just one possible example randomization, that fixes the treatment group sizes. 
 ##'
-##' @title Permutation Conditional Error Rate
+##' @title Permutation Conditional Error Rate (superseded by permutation_cer)
 ##' @param x1 vector of preplanned first stage observations
 ##' @param g1 vector of first stage treatment assignments
 ##' @param x2 vector of preplanned second stage observations
@@ -108,13 +108,59 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
   n <- length(c(x1,x2))
   n2 <- n-n1
   ## right parameter setting for one_sample
-  dist <- adaperm:::perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
-  cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  dist <- perm_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
+  cdist <- cond_dist(x1,x2,g1,g2,stat,permutations,restricted=restricted,...)
   m <- length(dist)
   talpha <- min(dist[rank(-dist,ties.method='max') <= (alpha*m)])
 #  trimmings <- trimmings(g1,g2,restricted,alpha)
   cer1 <- mean(cdist>=talpha) #+trimmings
   return(cer1)
+}
+
+##' Computes the conditional type I error rate of a pre-planned permutation test in a two-stage adaptive design. For a two-group design we condition on the observed first stage data and treatment assignments  as well as the observed second stage data - which we assume are obtained when the experiment reaches its preplanned sample size. In a one-sample design we condition on the absolute values of the outcome variable in both stages and as well as the first stage sign arrangement. 
+##'
+##' Based on the first stage data and treatment assignments one may perform sample size reassassment - and possibly other trial modifications - as long as the (preplanned) second stage sample size is not reduced.
+##'
+##' \code{stat} needs to be a function of the form \code{function(x,g)} returning a numeric of length one. Possible options are \code{\link{sumdiff}}, \code{\link{meandiff}}, \code{\link{zstat}}
+##'
+##' For \code{restricted=TRUE}, we assume that observations are randomized using random allocation blocked by stages, (i.e. wewould resample the first stage using \code{sample(g1)}). \code{restricted=FALSE} does keep the treatment group sizes fixed (i.e. one would resample using \code{sample(c(-1,1),n,replace=T)}. This is mainly usefull for onesample test that are invariant under sign-flip transformations.
+##'
+##' The conditional error rate may be computed for different types of pre-planned permutation tests. \code{"non-randomized"} assumes that the pre-planned test is the usual non-randomized permutation test that has size strictly below \code{alpha}. "randomized" assumes a randomized pre-planned test which makes a randomized decision if the observed test statistic is equal to the critical value, such that the size is exactly \code{alpha}. Uniform adds the difference between \code{alpha} and the size of the non-randomized test to the conditional error rate, such that the expectation of the resulting conditional error function over all permutations of the first stage data is exactly \code{alpha}. 
+##'
+##' @title Permutation Conditional Error Rate
+##' @param x1 vector of preplanned first stage observations
+##' @param x2 vector of preplanned second stage observations
+##' @param g1 vector of first stage treatment assignments
+##' @param nt2 preplanned second stage treatment group size (irrelevant for one-sample tests)
+##' @param test_statistic function computing the test statistic (see Details)
+##' @param permutations number of permutations (rerandomizations) used to compute unconditional and conditional permutation distributions
+##' @param alpha pre-fixed significance level
+##' @param restricted should stagewise treatment group sizes be considered fixed
+##' @param cer_type type of preplanned test for which the CER is computed (see details)
+##' @return numeric value of the conditional error rate
+##' @author Florian Klinglmueller
+##' @export
+permutation_cer <- function(x1,x2,
+                            g1,nt2=floor(length(x2)/2),
+                            test_statistic,
+                            permutations,
+                            alpha,
+                            restricted,
+                            cer_type=c("non-randomized","randomized","uniform")){
+    n1 <- length(x1)
+    n <- length(c(x1,x2))
+    n2 <- n-n2
+    g2 <- rep(0:1,each=nt2)
+    pdist <- adaperm:::perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    M <- length(dist)
+    talpha <- p2t(alpha,pdist)
+    A  <- mean(cdist > talpha)
+    trimmings <- switch(cer_type[1],
+                        'non-randomized' = 0,
+                        'randomized' = mean(cdist==talpha) * (alpha - mean(pdist > talpha)) / mean(pdist==talpha),
+                        'uniform' = (alpha - mean(pdist > talpha)))
+    A + trimmings
 }
 
 
