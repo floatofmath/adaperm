@@ -113,7 +113,7 @@ permutation_cer <- function(x1,x2,
     A + trimmings
 }
     
-adpative_dr <- function(x1,x2,xE,
+adpative_permdr <- function(x1,x2,xE,
                         g1,g2,gE,
                         test_statistic,
                         alpha,
@@ -134,7 +134,59 @@ adpative_dr <- function(x1,x2,xE,
         return(A >= perm_test(x2,xE,g2,gE,test_statistic,permutations,restricted=restricted,type=atest_type))
     }
 }
+.cer_types = c("non-randomized","randomized","uniform",)
+.atest_types = c("non-randomized","mid-p","davison_hinkley","CER")
 
-
+adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,nt2=NULL,conf_level=.025,cer_type=.cer_types,atest_type=.atest_types,permutations=10000){
+    if(is.null(g)){
+        ## one-sample test
+        restricted <- FALSE
+        obs <- split_sample_os(x,n1,n)
+    } else {
+        restricted  <- TRUE
+        if(length(g) == n1 && cer_type='CER'){
+            ## if we only want to know the CER
+            g <- c(g,rep(0,n-n1-nt2),rep(1,nt2))
+        }        
+        obs <- split_sapmle_ts(x[g<=0],y[g>0],n1,n,m1,m)
+    }
+    xs <- obs[[1]]
+    gs <- obs[[2]]
+    apaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
+                      gs[[1]],gs[[2]],gs[[3]],
+                      test_statistic,
+                      conf_level,
+                      permutations,
+                      restricted,
+                      atest_type,
+                      cer_type)
+}
+                      
+                      
     
+```
+
+## Old vs. new API
+
+```{r}
+
+decision_rules <- data.frame(purpose =
+                                 c('Compute CER',
+                                   'general decision rule',
+                                   'one-sample','two-sample',
+                                   'user friendly'),
+                             old_api =
+                                 c(permutation_CER,
+                                   adaptive_perm_test,
+                                   list(adaptive_permtest_os,adaptive_DR_os),
+                                   list(adaptive_pormtest_ts,adaptive_DR_ts),
+                                   NA),
+                             new_api =
+                                 c(permutation_cer,
+                                   adaptive_permtest,
+                                   NA,
+                                   NA,
+                                   adaperm))
+                             
+
 ```

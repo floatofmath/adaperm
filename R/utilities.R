@@ -4,12 +4,12 @@
 ##' @param x Observations
 ##' @param n1 First stage sample size
 ##' @param n Pre-planned total sample size
-##' @param ne Extended sample size
 ##' @return list with stagewise observations and stagewise sign-indicators
 ##' @author Florian Klinglmueller
-split_sample_os <- function(x,n1,n,ne=n){
+split_sample_os <- function(x,n1,n){
     g <- sign(x)
     x <- abs(x)
+    ne <- length(x)
     if(ne>n){
         xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
         gs <- split(g>0,rep(1:3,c(n1,n-n1,ne-n)))
@@ -30,13 +30,13 @@ split_sample_os <- function(x,n1,n,ne=n){
 ##' @param y Observations treatment group
 ##' @param n1 First stage sample size
 ##' @param n Pre-planned total sample size
-##' @param ne Extended sample size
 ##' @param m1 First stage sample size
 ##' @param m Pre-planned total sample size
-##' @param me Extended sample size
 ##' @return list with stagewise observations and stagewise sign-indicators
 ##' @author Florian Klinglmueller
-split_sample_ts <- function(x,y,n1,n,ne,m1,m,me){
+split_sample_ts <- function(x,y,n1,n,m1,m){
+    ne <- length(x)
+    me <- length(y)
     if(ne>n){
         xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
     } else {

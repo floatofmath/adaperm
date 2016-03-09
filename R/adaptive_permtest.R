@@ -1,3 +1,89 @@
+##' Quick no-nonsens adaptive permutation decision rule
+##' 
+##' @title Quick adaptive permutation test
+##' @param x1 first stage observations
+##' @param x2 second stage observations
+##' @param xE extended stage observations
+##' @param g1 frist stage treatment assignments
+##' @param g2 second stage treatment assignments
+##' @param gE extended stage treatment assignments
+##' @param test_statistic test statistic to use 
+##' @param alpha significance level
+##' @param permutations number of permutations to use
+##' @param restricted should the treatment group sizes be fixed
+##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
+##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for details
+##' @return pvalue
+##' @author Florian Klinglmueller
+##' @export
+adpative_permdr <- function(x1,x2,xE,
+                        g1,g2,gE,
+                        test_statistic,
+                        alpha,
+                        permutations,
+                        restricted,
+                        atest_type=c("non-randomized","mid-p","davison_hinkley","CER"),
+                        cer_type=c("non-randomized","randomized","uniform")){
+    A <- permutation_cer(x1,x2,
+                         g1,sum(g2>0),
+                         test_statistic,
+                         alpha,
+                         permutations,
+                         restricted,
+                         cer_type)
+    if(atest_type == 'CER'){
+        return(A)
+    } else {
+        return(A >= perm_test(x2,xE,g2,gE,test_statistic,permutations,restricted=restricted,type=atest_type))
+    }
+}
+.cer_types = c("non-randomized","randomized","uniform",)
+.atest_types = c("non-randomized","mid-p","davison_hinkley","CER")
+
+
+##' User friendly wrapper to \code{\link{adaptive_permdr}}
+##'
+##' @title Permutation based decision rule for adaptive designs
+##' @param x Observations
+##' @param g Treatment assignments (if \code{NULL}) a one-sample test will be performed
+##' @param n1 First stage control-group sample size
+##' @param n Pre-planned overall sample size
+##' @param m1 First stage treatment-group sample size (will be ignored if \code{g} is \code{NULL})
+##' @param m Pre-planned overall treatment-group sample size (will be ignored if \code{g} is \code{NULL})
+##' @param test_statistic Test statistic
+##' @param alpha Significance level
+##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
+##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detail##' @param cer_type 
+##' @param permutations Number of permutations to use
+##' @return Decision \code{TRUE} if null hypothesis is rejected
+##' @author Florian Klinglmueller
+##' @export
+adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,nt2=NULL,alpha=.025,cer_type=.cer_types,atest_type=.atest_types,permutations=10000){
+    if(is.null(g)){
+        ## one-sample test
+        restricted <- FALSE
+        obs <- split_sample_os(x,n1,n)
+    } else {
+        restricted  <- TRUE
+        if(length(g) == m1+n1 && cer_type='CER'){
+            ## if we only want to know the CER
+            g <- c(g,rep(0,n-n1),rep(1,m-m1))
+        }        
+        obs <- split_sapmle_ts(x[g<=0],y[g>0],n1,n,m1,m)
+    }
+    xs <- obs[[1]]
+    gs <- obs[[2]]
+    apaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
+                      gs[[1]],gs[[2]],gs[[3]],
+                      test_statistic,
+                      alpha,
+                      permutations,
+                      restricted,
+                      atest_type,
+                      cer_type)
+}
+
+
 adaptive_permtest_ts <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,conf_level=.05){
     pval <- adaptive_permtest_quick(x1,x2,xE,g1,g2,gE,stat,permutations=10000)
     err <- function(d,conf_level=.5){
@@ -78,57 +164,6 @@ adaptive_permtest_os <- function(x,n1,n,ne,test_statistic,perms=50000,alpha=0.02
 }
 
 
-##' Adaptive decision rule
-##'
-##' Slightly faster than the test that computes p-values
-##' 
-##' @title One-sample adaptive permutation test
-##' @template onesample_sims
-##' @param perms Maximum number of permutations to use when computing permutation p-values and conditional error rates
-##' @author Florian Klinglmueller
-adaptive_DR_os <- function(x,n1,n,ne,test_statistic,perms=50000,alpha=0.025){
-    obs <- split_sample_os(x,n1,n,ne)
-    if(ne>n){
-        xs <- obs[[1]]
-        gs <- obs[[2]]
-        A <- permutation_CER(xs[[1]],gs[[1]],xs[[2]],test_statistic,restricted=FALSE,permutations=perms,alpha=alpha)
-        q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,restricted=FALSE,B=perms)
-        return(A>=q)
-    } else {
-        xs <- obs[[1]]
-        gs <- obs[[2]]
-        return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,restricted=FALSE,B=perms))
-    }
-}
-
-
-##' Adaptive decision rule
-##'
-##' Slightly faster than the test that computes p-values
-##' 
-##' @title Two-sample adaptive permutation test
-##' @template twosample_sims
-##' @param perms Maximum number of permutations to use when computing permutation p-values and conditional error rates
-##' @author Florian Klinglmueller
-adaptive_DR_ts <- function(x,y,n1,n,ne,m1,m,me,test_statistic,perms=50000,alpha=0.025){
-    if(ne>n){
-        xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
-    } else {
-        if(me>m) stop('Stages with controls only not supported')
-        xs <- split(x,rep(1:2,c(n1,ne-n1)))
-    }
-    if(me>m){
-        ys <- split(y,rep(1:3,c(m1,m-m1,me-m)))
-    } else {
-        if(ne>n) stop('Stages with treatments only not supported')
-        ys <- split(y,rep(1:2,c(m1,me-m1)))
-    }
-    gs <- lapply(1:length(xs),function(i) rep(0:1,c(length(xs[[i]],ys[[i]]))))
-    xs <- lapply(1:length(xs),function(i) c(xs[[i]],ys[[i]]))
-    A <- permutation_CER(xs[[1]],gs[[1]],xs[[2]],test_statistic,permutations=perms,alpha=alpha)
-    q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms)
-    A>=q
-}
 
 ##' Adaptive decision rule
 ##'
