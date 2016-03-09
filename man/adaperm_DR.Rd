@@ -5,8 +5,8 @@
 \title{Permutation based decision rule for adaptive designs}
 \usage{
 adaperm_DR(x, g = NULL, n1, n, m1 = n1, m = n, test_statistic,
-  nt2 = NULL, alpha = 0.025, cer_type = .cer_types,
-  atest_type = .atest_types, permutations = 10000)
+  alpha = 0.025, cer_type = .cer_types, atest_type = .atest_types,
+  permutations = 10000)
 }
 \arguments{
 \item{x}{Observations}
@@ -25,7 +25,7 @@ adaperm_DR(x, g = NULL, n1, n, m1 = n1, m = n, test_statistic,
 
 \item{alpha}{Significance level}
 
-\item{cer_type}{what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detail##' @param cer_type}
+\item{cer_type}{what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detailcer_type}
 
 \item{atest_type}{if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details)}
 

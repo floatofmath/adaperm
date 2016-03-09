@@ -149,10 +149,10 @@ permutation_cer <- function(x1,x2,
                             cer_type=c("non-randomized","randomized","uniform")){
     n1 <- length(x1)
     n <- length(c(x1,x2))
-    n2 <- n-n2
+    n2 <- n-n1
     g2 <- rep(0:1,each=nt2)
-    pdist <- adaperm:::perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
-    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    pdist <- perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    cdist <- cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
     M <- length(dist)
     talpha <- p2t(alpha,pdist)
     A  <- mean(cdist > talpha)

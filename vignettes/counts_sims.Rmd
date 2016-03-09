@@ -165,6 +165,9 @@ y <- r_counts(ne,df=5,theta=2)
 adaptive_permtest_2s(x,y,n1,n,ne,meandiff)
 adaptive_permtest_2s(x,y,n1,n,ne,meanratio)
 
+adaperm_DR(c(x,y),c(rep(0,ne),rep(1,ne)),n1,n,
+           test=meandiff,cer_type='non-randomized',atest_type='midp')
+
 adaptive_invnormtest_2s(x,y,n1,n,ne)
 adaptive_invnorm_wilcoxtest_2s (x,y,n1,n,ne)
 adaptive_invnormtest_negbin_2s(x,y,n1,n,ne)

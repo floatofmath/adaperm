@@ -16,7 +16,7 @@
 ##' @return pvalue
 ##' @author Florian Klinglmueller
 ##' @export
-adpative_permdr <- function(x1,x2,xE,
+adaptive_permdr <- function(x1,x2,xE,
                         g1,g2,gE,
                         test_statistic,
                         alpha,
@@ -26,15 +26,15 @@ adpative_permdr <- function(x1,x2,xE,
                         cer_type=c("non-randomized","randomized","uniform")){
     A <- permutation_cer(x1,x2,
                          g1,sum(g2>0),
-                         test_statistic,
-                         alpha,
-                         permutations,
-                         restricted,
-                         cer_type)
+                         test_statistic=test_statistic,
+                         alpha=alpha,
+                         permutations=permutations,
+                         restricted=restricted,
+                         cer_type=cer_type)
     if(atest_type == 'CER'){
         return(A)
     } else {
-        return(A >= perm_test(x2,xE,g2,gE,test_statistic,permutations,restricted=restricted,type=atest_type))
+        return(A >= perm_test(x2,xE,g2,gE,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
     }
 }
 .cer_types = c("non-randomized","randomized","uniform")
@@ -52,13 +52,13 @@ adpative_permdr <- function(x1,x2,xE,
 ##' @param m Pre-planned overall treatment-group sample size (will be ignored if \code{g} is \code{NULL})
 ##' @param test_statistic Test statistic
 ##' @param alpha Significance level
+##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detailcer_type 
 ##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
-##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detail##' @param cer_type 
 ##' @param permutations Number of permutations to use
 ##' @return Decision \code{TRUE} if null hypothesis is rejected
 ##' @author Florian Klinglmueller
 ##' @export
-adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,nt2=NULL,alpha=.025,cer_type=.cer_types,atest_type=.atest_types,permutations=10000){
+adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type=.cer_types,atest_type=.atest_types,permutations=10000){
     if(is.null(g)){
         ## one-sample test
         restricted <- FALSE
@@ -69,18 +69,18 @@ adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,nt2=NULL,alpha=.02
             ## if we only want to know the CER
             g <- c(g,rep(0,n-n1),rep(1,m-m1))
         }        
-        obs <- split_sapmle_ts(x[g<=0],y[g>0],n1,n,m1,m)
+        obs <- split_sample_ts(x[g<=0],x[g>0],n1,n,m1,m)
     }
     xs <- obs[[1]]
     gs <- obs[[2]]
-    apaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
+    adaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
                       gs[[1]],gs[[2]],gs[[3]],
-                      test_statistic,
-                      alpha,
-                      permutations,
-                      restricted,
-                      atest_type,
-                      cer_type)
+                      test_statistic=test_statistic,
+                      alpha=alpha,
+                      permutations=permutations,
+                      restricted=restricted,
+                      atest_type=atest_type,
+                      cer_type=cer_type)
 }
 
 
