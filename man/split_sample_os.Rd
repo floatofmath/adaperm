@@ -4,7 +4,7 @@
 \alias{split_sample_os}
 \title{Split single group sample}
 \usage{
-split_sample_os(x, n1, n, ne = n)
+split_sample_os(x, n1, n)
 }
 \arguments{
 \item{x}{Observations}
@@ -12,8 +12,6 @@ split_sample_os(x, n1, n, ne = n)
 \item{n1}{First stage sample size}
 
 \item{n}{Pre-planned total sample size}
-
-\item{ne}{Extended sample size}
 }
 \value{
 list with stagewise observations and stagewise sign-indicators

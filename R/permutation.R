@@ -213,7 +213,7 @@ t2p  <- function(t,dist,type=c('non-randomized','midp','randomized','davison_hin
 ##' @param dist permutation distribution
 ##' @return critical value
 ##' @author Florian Klinglmueller
-p2t <- function(p,dist)
+p2t <- function(p,dist){
     max(dist[rank(-dist,ties='min') >= p*length(dist)])
 }
 

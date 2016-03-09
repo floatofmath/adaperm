@@ -4,7 +4,8 @@
 \alias{perm_test}
 \title{perform permutation test}
 \usage{
-perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted, ...)
+perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted,
+  type = c("non-randomized", "randomized", "midp", "davison_hinkley"))
 }
 \arguments{
 \item{x1}{First stage observations}
@@ -25,13 +26,16 @@ perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted, ...)
 
 \item{restricted}{Should group sizes be considered fixed}
 
-\item{...}{further arguments to perm_dist}
+\item{type}{Type of p-value to compute (see details)}
 }
 \value{
 p-value of the permutation test
 }
 \description{
 Perform a permutation test (stratified by stages)
+}
+\details{
+\code{type} specifies which permutation p-value to use. "non-randomized" will use the p-value of the non-randomized permutation test. "randomized" will use a randomized p-value that subtracts a random quantity from the non-randomized p-value, such that the a test that rejects for \code{p <= alhpa} has size exactly \code{alpha}. "midp" computes the mid-p-value which is the expected value of the randomized p-value. Davison-Hinkley returns the fraction between the permutation test statistics larger than \code{t} plus one and the permutation test statistics different from \code{t} plus one. The latter is mostly usefull when not all possible permutations are used.
 }
 \author{
 Florian Klinglmueller

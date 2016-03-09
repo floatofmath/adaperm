@@ -2,7 +2,7 @@
 % Please edit documentation in R/adaptive.R
 \name{permutation_CER}
 \alias{permutation_CER}
-\title{Permutation Conditional Error Rate}
+\title{Permutation Conditional Error Rate (superseded by permutation_cer)}
 \usage{
 permutation_CER(x1, g1, x2, stat = sumdiff, permutations = 1000,
   alpha = 0.025, g2 = rep(c(-1, 1), each = length(x2)/2),

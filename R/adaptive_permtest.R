@@ -37,7 +37,7 @@ adpative_permdr <- function(x1,x2,xE,
         return(A >= perm_test(x2,xE,g2,gE,test_statistic,permutations,restricted=restricted,type=atest_type))
     }
 }
-.cer_types = c("non-randomized","randomized","uniform",)
+.cer_types = c("non-randomized","randomized","uniform")
 .atest_types = c("non-randomized","mid-p","davison_hinkley","CER")
 
 

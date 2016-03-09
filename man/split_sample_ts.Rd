@@ -4,7 +4,7 @@
 \alias{split_sample_ts}
 \title{Split two-group sample}
 \usage{
-split_sample_ts(x, y, n1, n, ne, m1, m, me)
+split_sample_ts(x, y, n1, n, m1, m)
 }
 \arguments{
 \item{x}{Observations control group}
@@ -15,13 +15,9 @@ split_sample_ts(x, y, n1, n, ne, m1, m, me)
 
 \item{n}{Pre-planned total sample size}
 
-\item{ne}{Extended sample size}
-
 \item{m1}{First stage sample size}
 
 \item{m}{Pre-planned total sample size}
-
-\item{me}{Extended sample size}
 }
 \value{
 list with stagewise observations and stagewise sign-indicators
