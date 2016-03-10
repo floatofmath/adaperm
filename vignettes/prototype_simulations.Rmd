@@ -22,6 +22,249 @@ options(mc.cores=detectCores()-1)
 ```
 
 
-# Normal distribution
+# Tests under consideration
+
+We look at three classes of tests:
+
+1. **Inverse-normal combination tests**
+   1. Equal variance $t$-test 
+   2. Stage-wise Wilcoxon Rank-sum tests
+
+2. **Permutation based conditional error tests**
+   1. Permutation test using $t$-statistic
+   2. Permutation test using Wilcoxon Rank-sum statistic
+   3. Permutation test using Maritz-m statistic
+
+3. **Nonparametric combination test**
+   1. Permutation test using $t$-statistic
+   2. Permutation test using Wilcoxon Rank-sum statistic
+   3. Permutation test using Maritz-m statistic
 
 
+# Distributions
+
+Naturally we need to consider the Normal distribution. Proschan
+considers the following distributions:
+  
+- log-gamma distribution
+- t-distribution
+  
+Gorman considers the following distributions:
+  
+- uniform
+- t-distribution df=4
+- lambda family 
+- symmetric bimodal
+- skewed bimodal
+
+For all distributions we will study a scenario under the null, and two
+scenarios under the alternative - one where the *Inverse-normal
+combination $t$-test* has 60% power with a preplanned total per-group
+sample size of 10, the other where it achieves 80% power with a
+preplanned total per-group sample size of 100. 
+
+# Sample size reassessment
+
+In all cases we will apply a sample size reassessment rule based on
+a conditional power rule that reestimates the sample size based on an
+unblinded estimate of the variance. 
+
+
+# Code
+
+## Test procedure
+
+```{r}
+x <- rnorm(20)
+y <- rnorm(20)
+
+adaptive_invnormtest_2s(x,y,n1=8,n=16,ne=20)
+adaptive_invnorm_wilcoxtest_2s(x,y,n1=8,n=16,ne=20)
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=tstat,cer_type='randomized',atest_type='midp')
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum,cer_type='randomized',atest_type='midp')
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=maritzm,cer_type='randomized',atest_type='midp')
+    
+```
+
+## Distributions
+
+### Small sample scenarios
+
+```{r}
+x <- rnorm(10)
+y <- rnorm(10)
+adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)
+
+## Assume m0 = 1 s0=.75 (power=80), true m0=1 s0=.9 (power=60)
+power.t.test(10,1,.6)
+mean(replicate(10000,{
+sd <- .9
+x <- rnorm(10,sd=sd)
+y <- rnorm(10,m=1,sd=sd)
+adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)}))
+
+
+x <- log(rgamma(10,1))
+y <- log(rgamma(10,1))
+adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)
+
+
+mean(replicate(10000,{a <- 1
+                      ncp <- 1.35
+                      x <- log(rgamma(10,a))
+                      y <- log(rgamma(10,a))+ncp
+                      adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)}))
+
+x <- rt(10,4)
+y <- rt(10,4)
+adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)
+
+mean(replicate(10000,{ncp <- 1.2
+                      x <- rt(10,4)
+                      y <- rt(10,4,ncp)
+                      adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)}))
+
+
+```
+
+This concludes the configuration of the small sample setup.
+
+In all situations our planning assumption is normally distributed
+observations with mean difference of $\delta_0=1$ and common standard deviation
+of $\sigma_0=.6$ but simulate data from. Note that for these small
+sample sizes there is quite a large difference in power between the
+the inverse normal combination and the fixed sample t-test, the latter
+has a power of 94% for $\sigma_0=.6$.
+
+1. Normal distributions with mean-differences $\delta=1$ and $\sigma=.9$
+2. Log-gamma distirbiutions with shape parameter $a=1$ shifted by
+   $\delta=1.35$ in the treatment group
+3. $t$-distributions with $4$ degrees of freedom and non-centrality
+   parameter $1.2$ in the treatment group
+
+in all cases the inverse normal combination test has a (simulated)
+power of 60%.
+
+### Large sample scenarios
+
+```{r}
+x <- rnorm(100)
+y <- rnorm(100)
+adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)
+
+## Assume m0 = 1 s0=2.5 (power=80), true m0=1 s0=3.2 (power=60)
+power.t.test(100,1,2.5)
+
+mean(replicate(10000,{
+sd <- 3.2
+x <- rnorm(100,sd=sd)
+y <- rnorm(100,m=1,sd=sd)
+adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)}))
+
+
+x <- log(rgamma(100,1))
+y <- log(rgamma(100,1))
+adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)
+
+
+mean(replicate(10000,{a <- 1
+                      ncp <- .4
+                      x <- log(rgamma(100,a))
+                      y <- log(rgamma(100,a))+ncp
+                      adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)}))
+
+x <- rt(100,4)
+y <- rt(100,4)
+adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)
+
+mean(replicate(10000,{ncp <- .35
+                      x <- rt(100,4)
+                      y <- rt(100,4,ncp)
+                      adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)}))
+
+
+```
+This concludes the configuration of the large sample setup.
+
+In all situations our planning assumption is normally distributed
+observations with mean difference of $\delta_0=1$ and common standard deviation
+of $\sigma_0=2.5$. For these larger sample sizes there is almost no
+difference in power between the the inverse normal combination and the
+fixed sample t-test. We will simulate data from:
+
+1. Normal distributions with mean-differences $\delta=1$ and $\sigma=3.2$
+2. Log-gamma distirbiutions with shape parameter $a=1$ shifted by
+   $\delta=.4$ in the treatment group
+3. $t$-distributions with $4$ degrees of freedom and non-centrality
+   parameter $.35$ in the treatment group
+
+in all cases the inverse normal combination test has a (simulated)
+power of 60%.
+
+
+# Simulation study
+
+```{r}
+
+scenarios <- data_frame(n1 = c(rep(5,3),rep(50,3)),
+                n =  c(rep(10,3),rep(100,3)),
+                distribution = rep(c('normal','log-gamma','t4'),2),
+                parameter = c(.9,1.35,1.2,3.2,.4,.35),
+                delta0 = rep(1,6),
+                sigma0 = rep(c(.6,2.5),each=3))
+                
+cond_power_rule_t_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=Inf){
+    n1 <- length(x)
+    var <- pooled_variance(c(x,y),c(rep(0,length(x)),rep(1,length(y))))
+    nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
+    df <- ifelse(n1>nE,ceiling(nE),floor(nE))
+    ceiling(2*(qt(alpha,df,lower=F)+qt(target,df))^2*var/(delta^2))
+}
+
+
+run_scenario <- function(scenario){
+    with(scenario,{
+             xdist = function(N) {
+                 switch(distribution,
+                        'normal'=rnorm(N,m=0,sd=parameter),
+                        'log-gamma'=log(rgamma(N,1)),
+                        't4'=rt(N,4))
+             }
+             ydist = function(N) {
+                 switch(distribution,
+                        'normal'=rnorm(N,m=1,sd=parameter),
+                        'log-gamma'=log(rgamma(N,1))+parameter,
+                        't4'=rt(N,4,ncp=parameter))
+             }
+             x1 <- xdist(n1)
+             y1 <- ydist(n1)
+             nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.8))
+             x <- c(x1,xdist(nE-n1))
+             y <- c(y1,ydist(nE-n1))
+             data_frame(
+             nE=nE,
+             invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
+             invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
+             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp'),
+             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp'),
+             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,cer_type='randomized',atest_type='midp'))
+         })
+}
+
+simulate_scenario <- function(scenario,B){
+    bind_rows(mclapply(1:B,function(i) run_scenario(scenario))) %>%
+        summarise(pSN = scenario$n,
+                  ASN = mean(nE),
+                  sdSN = sd(nE),
+                  MSN = max(nE),
+                  invnorm_t=mean(invnorm_t),
+                  invnorm_w=mean(invnorm_w),
+                  adaperm_t=mean(adaperm_t),
+                  adaperm_w=mean(adaperm_w),
+                  adaperm_m=mean(adaperm_m))
+}
+
+simulate_scenario(scenarios[1,],B=10)
+
+
+```
