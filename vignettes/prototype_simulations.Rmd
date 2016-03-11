@@ -13,6 +13,8 @@ vignette: >
 library(magrittr)
 library(plyr)
 library(dplyr)
+library(reshape2)
+library(ggplot2)
 library(pander)
 library(parallel)
 library(bt88.03.704)
@@ -206,8 +208,7 @@ cond_power_rule_t_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=length(x
                   robust_pooled_variance(x,y),
                   pooled_variance(c(x,y),c(rep(0,length(x)),rep(1,length(y)))))
     nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
-    df <- ifelse(n1>nE,ceiling(nE),floor(nE))
-    min(maxN,ceiling(2*(qt(alpha,df,lower=F)+qt(target,df))^2*var/(delta^2)))
+    min(maxN,nE)
 }
 
 ```
@@ -291,19 +292,23 @@ run_scenario <- function(scenario){
              }
              x1 <- xdist(n1)
              y1 <- ydist(n1)
-             delta <- c('normal'=delta0,
+             delta <- c('normal'=1,
                         'log-gamma'=parameter,
                         't4'=parameter,
-                        'cont'=delta0)[distribution]
+                        'cont'=1)[distribution]
              nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
+             n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
+                                        #ttpe  <- ifelse(n_combs>10000,'davison_hinkley','midp')
+             ttpe <- 'non-randomized'
+             cete <- 'non-randomized'
              x <- c(x1,xdist(nE-n1))
              y <- c(y1,ydist(nE-n1))
              data_frame(
              nE=nE,
              invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
              invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,atest_type='davison_hinkley'),
-             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,atest_type='davison_hinkley'))
+             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=20000),
+             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type=cete,atest_type=ttpe,permutations=20000))
 #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
 }
@@ -321,7 +326,7 @@ simulate_scenario <- function(scenario,B){
 }
 ```
 
-```{r}
+```{r,eval=F}
 
 scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
                 n =  rep(c(rep(10,4),rep(100,4)),2),
@@ -333,9 +338,25 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
                 
 
 
-out <- list()
-for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=5000))
+out <- list() 
+for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 sims <- bind_rows(out)
-save(sims,file=vfile('~/adaperm_simresults/simulations'))
+#save(sims,file=vfile('~/adaperm_simresults/simulations'))
+
+
+```
+
+```{r}
+load('~/adaperm_simresults/simulations_node5_160311.Rd')
+
+pdf('simresults.pdf')
+sims %>% 
+    melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>%
+        ggplot(aes(distribution,Power,fill=Test))+geom_bar(stat='identity',position='dodge')+facet_grid(delta0~n1,scales='free_y')
+dev.off()
+
+sims %>% melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>%
+    subset(delta0==0) %>% dcast(Test~n1+distribution,value.var='Power')
+
 
 ```
