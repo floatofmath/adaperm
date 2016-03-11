@@ -16,9 +16,10 @@ library(dplyr)
 library(pander)
 library(parallel)
 library(bt88.03.704)
-devtools::install_github('floatofmath/adaperm')
+#devtools::install_github('floatofmath/adaperm')
 library(adaperm)
 options(mc.cores=detectCores()-1)
+
 ```
 
 
@@ -124,6 +125,10 @@ mean(replicate(10000,{ncp <- 1.2
                       y <- rt(10,4,ncp)
                       adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)}))
 
+mean(replicate(10000,{sd <- .8
+                      x <- rnorm_cont(10,0,sd,cshift=0,csd=3*sd)
+                      y <- rnorm_cont(10,1,sd,cshift=1,csd=3*sd)
+                      adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)}))
 
 ```
 
@@ -147,7 +152,7 @@ power of 60%.
 
 ### Large sample scenarios
 
-```{r}
+```{r,eval=F}
 x <- rnorm(100)
 y <- rnorm(100)
 adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)
@@ -182,6 +187,66 @@ mean(replicate(10000,{ncp <- .35
                       y <- rt(100,4,ncp)
                       adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)}))
 
+adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)
+
+mean(replicate(10000,{sd <- 2.8
+                      x <- rnorm_cont(100,0,sd,cshift=0,csd=3*sd)
+                      y <- rnorm_cont(100,1,sd,cshift=1,csd=3*sd)
+                      adaptive_invnormtest_2s(x,y,n1=50,n=100,ne=100)}))
+
+```
+
+```{r}
+robust_pooled_variance <- function(x,y){
+    (iqr(c(x-median(x),y-median(y)))/1.349)^2
+}
+cond_power_rule_t_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=length(x)*6,rob_var=T){
+    n1 <- length(x)
+    var <- ifelse(rob_var,
+                  robust_pooled_variance(x,y),
+                  pooled_variance(c(x,y),c(rep(0,length(x)),rep(1,length(y)))))
+    nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
+    df <- ifelse(n1>nE,ceiling(nE),floor(nE))
+    min(maxN,ceiling(2*(qt(alpha,df,lower=F)+qt(target,df))^2*var/(delta^2)))
+}
+
+```
+```{r,eval=F}
+mean(replicate(10000,{
+                   sd <- 3.2
+                   x <- rnorm(100,sd=sd)
+                   y <- rnorm(100,m=1,sd=sd)
+                   sqrt(robust_pooled_variance(x,y))}))
+
+mean(replicate(10000,{
+                   sd <- 3.2
+                   x <- rnorm(100,sd=sd)
+                   y <- rnorm(100,m=1,sd=sd)
+                   sqrt(pooled_variance(c(x,y),rep(0:1,each=100)))}))
+
+mean(replicate(10000,{ncp <- .35
+                      x <- rt(100,4)*2.8
+                      y <- rt(100,4,ncp)*2.8
+                      sqrt(robust_pooled_variance(x,y))}))
+
+mean(replicate(10000,{a <- 1
+                      ncp <- .4
+                      x <- log(rgamma(100,a))
+                      y <- log(rgamma(100,a))+ncp
+                      sqrt(robust_pooled_variance(x,y))}))
+
+mean(replicate(10000,{ncp <- 1
+                      x <- rnorm_cont(100,0,3.15,cshift=0,csd=3*3.15)
+                      y <- rnorm_cont(100,ncp,3.15,cshift=ncp,csd=3*3.15)
+                      sqrt(robust_pooled_variance(x,y))}))
+
+
+mean(replicate(10000,{ncp <- 1
+                      x <- rnorm_cont(100,0,3.15,cshift=0,csd=3*3.15)
+                      y <- rnorm_cont(100,ncp,3.15,cshift=ncp,csd=3*3.15)
+                      sqrt(pooled_variance(c(x,y),rep(0:1,each=100)))}))
+                      
+
 
 ```
 This concludes the configuration of the large sample setup.
@@ -206,20 +271,6 @@ power of 60%.
 
 ```{r}
 
-scenarios <- data_frame(n1 = c(rep(5,3),rep(50,3)),
-                n =  c(rep(10,3),rep(100,3)),
-                distribution = rep(c('normal','log-gamma','t4'),2),
-                parameter = c(.9,1.35,1.2,3.2,.4,.35),
-                delta0 = rep(1,6),
-                sigma0 = rep(c(.6,2.5),each=3))
-                
-cond_power_rule_t_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=Inf){
-    n1 <- length(x)
-    var <- pooled_variance(c(x,y),c(rep(0,length(x)),rep(1,length(y))))
-    nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
-    df <- ifelse(n1>nE,ceiling(nE),floor(nE))
-    ceiling(2*(qt(alpha,df,lower=F)+qt(target,df))^2*var/(delta^2))
-}
 
 
 run_scenario <- function(scenario){
@@ -228,43 +279,63 @@ run_scenario <- function(scenario){
                  switch(distribution,
                         'normal'=rnorm(N,m=0,sd=parameter),
                         'log-gamma'=log(rgamma(N,1)),
-                        't4'=rt(N,4))
+                        't4'=rt(N,4),
+                        'cont'=rnorm_cont(N,m=0,sd=parameter,cshift=0,csd=3*parameter))
              }
              ydist = function(N) {
                  switch(distribution,
-                        'normal'=rnorm(N,m=1,sd=parameter),
-                        'log-gamma'=log(rgamma(N,1))+parameter,
-                        't4'=rt(N,4,ncp=parameter))
+                        'normal'=rnorm(N,m=delta0,sd=parameter),
+                        'log-gamma'=log(rgamma(N,1))+delta0*parameter,
+                        't4'=rt(N,4,ncp=delta0*parameter),
+                        'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=delta0,csd=3*parameter))
              }
              x1 <- xdist(n1)
              y1 <- ydist(n1)
-             nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.8))
+             delta <- c('normal'=delta0,
+                        'log-gamma'=parameter,
+                        't4'=parameter,
+                        'cont'=delta0)[distribution]
+             nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
              x <- c(x1,xdist(nE-n1))
              y <- c(y1,ydist(nE-n1))
              data_frame(
              nE=nE,
              invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
              invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp'),
-             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp'),
-             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,cer_type='randomized',atest_type='midp'))
+             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,atest_type='davison_hinkley'),
+             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,atest_type='davison_hinkley'))
+#             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
 }
 
 simulate_scenario <- function(scenario,B){
-    bind_rows(mclapply(1:B,function(i) run_scenario(scenario))) %>%
-        summarise(pSN = scenario$n,
-                  ASN = mean(nE),
+    bind_rows(mclapply2(1:B,function(i) run_scenario(scenario))) %>%
+        summarise(ASN = mean(nE),
                   sdSN = sd(nE),
                   MSN = max(nE),
                   invnorm_t=mean(invnorm_t),
                   invnorm_w=mean(invnorm_w),
                   adaperm_t=mean(adaperm_t),
-                  adaperm_w=mean(adaperm_w),
-                  adaperm_m=mean(adaperm_m))
+                  adaperm_w=mean(adaperm_w))
+#                  adaperm_m=mean(adaperm_m))
 }
+```
 
-simulate_scenario(scenarios[1,],B=10)
+```{r}
 
+scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
+                n =  rep(c(rep(10,4),rep(100,4)),2),
+                distribution = rep(rep(c('normal','log-gamma','t4','cont'),2),2),
+                        parameter = rep(c(.9,1.35,1.2,.8,
+                            3.2,.4,.35,2.8),2),
+                delta0 = rep(0:1,each=8),
+                sigma0 = rep(rep(c(.6,2.5),each=4),2))
+                
+
+
+out <- list()
+for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=5000))
+sims <- bind_rows(out)
+save(sims,file=vfile('~/adaperm_simresults/simulations'))
 
 ```
