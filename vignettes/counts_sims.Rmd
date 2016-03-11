@@ -166,7 +166,7 @@ y <- r_counts(ne,df=5,theta=2)
 # adaptive_permtest_2s(x,y,n1,n,ne,meanratio,restricted=FALSE,type='non-randomized')
 
 adaperm_DR(c(x,y),c(rep(0,ne),rep(1,ne)),n1,n,
-           test=meandiff,cer_type='non-randomized',atest_type='midp')
+           test=meandiff,cer_type='non-randomized',atest_type='midp',permutations =10)
 
 adaptive_invnormtest_2s(x,y,n1,n,ne)
 adaptive_invnorm_wilcoxtest_2s (x,y,n1,n,ne)
@@ -222,7 +222,7 @@ run_scenario_counts <- function(B,...){
                          rule=scenario$rule,rdist=scenario$rdist,
                          test_statistic=scenario$test_statistic,
                          control_opts=list(df=scenario$df,lambda=scenario$lambda),
-                         treatment_opts=list(df=scenario$df,theta=scenario$theta,lambda=scenario$lambda))})
+                         treatment_opts=list(df=scenario$df,theta=scenario$theta,lambda=scenario$lambda),perms=scenario$perms)})
     
     results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),
                                         perm_CERnonrndmz_Anonrndmz = mean(perm_CERnonrndmz_Anonrndmz),
@@ -254,10 +254,10 @@ set.seed(1)
 scenarios_test <- expand.grid(n1=c(10,20,50),
                               theta= c(1,1.2),
                               lambda=c(5,10),
-                              perms= 10)
+                              perms= 1000)
 scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
-sim_counts_poisson=run_simulation_counts(scenarios_test,B=10,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=10)
+sim_counts_poisson=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
 sim_counts_poisson
 save(sim_counts_poisson,file=vfile("../data/sim_counts_poisson",ending="rda"))
 ```
