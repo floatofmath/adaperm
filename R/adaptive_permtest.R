@@ -23,7 +23,10 @@ adaptive_permdr <- function(x1,x2,xE,
                         permutations,
                         restricted,
                         atest_type=c("non-randomized","mid-p","davison_hinkley","CER"),
-                        cer_type=c("non-randomized","randomized","uniform")){
+                            cer_type=c("non-randomized","randomized","uniform")){
+    if(is.null(xE) && !atest_type=='CER'){
+        return(alpha>=perm_test(x1,x2,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
+    }
     A <- permutation_cer(x1,x2,
                          g1,sum(g2>0),
                          test_statistic=test_statistic,

@@ -1,3 +1,34 @@
+##' Compare operating characteristics for a number of one-sample tests
+##'
+##' \code{test_funs} needs to be a list of functions that take arguments \code{x,n1,n,ne,permutations} and return \code{TRUE} of \code{FALSE} depending on whether the corresponding decision rule rejects the null hypothesis or not.
+##'
+##' \code{rule} needs to be a function that takes as argument the vector of first stage observations and return an interger number, which (if larger than \code{n}) will be used as the new total sample size.
+##' 
+##' @title Compare one-sample test procedures
+##' @param test_funs list of test functions (see Details)
+##' @param n1 first stage sample size
+##' @param n pre-planned total sample size
+##' @param rule sample size reassessment rule (see Details)
+##' @param rdist distribution from which to draw observations 
+##' @param ... additional arguments to rdist
+##' @return let's see
+##' @author Florian Klinglmueller
+##' @export
+compare_tests_onesample <- function(B,test_funs,n1,n,rule,rdist,...){
+    run <- function(test_funs,n1,n,rule,rdist,...){
+        x <- rdist(n,...)
+        ne <- rule(x[1:n1])
+        if(ne>n){
+            x <- c(x,rdist(ne-n,...))
+        } else {
+            ne <- n
+        }
+        c(n1=n1,n=n,ne=ne,lapply(test_funs,do.call,list(x,n1,n,ne)))
+    }
+    results <- mclapply2(1:B,function(i) run(test_funs,n1,n,rule,rdist,...))
+    results %>% bind_rows -> results
+    eval(expr=parse(text=paste0("summarize(results,ASN=mean(ne),maxSN=max(ne),sdSN=sd(ne),",paste0(names(tests),"=","mean(",names(tests),")",collapse=','),")")))
+}
 
 ##' Adaptive t-test as described in Timmesfeld et al. (2007)
 ##'

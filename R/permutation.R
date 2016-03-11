@@ -8,6 +8,7 @@
 ##' @author Florian Klinglmueller
 all_reassignments <- function(n,k){
     N <- choose(n,k)
+    if(N > 10^10) stop('Are you crazy? To many combinations!!!')
     M <- matrix(0L,n,N)
     M[cbind(as.integer(combinations_cpp(n,k)),rep(1:N,each=k))] <- 1L
     M
