@@ -1,6 +1,8 @@
-##### alternative version of the function!!
+# ##### alternative version of the function!!
 adaptive_permtest_2s <- function(x,y,n1,n,ne,test_statistic,
-                                 m1=n1,m=n,me=ne,perms=1000,alpha=0.025){
+                                 m1=n1,m=n,me=ne,perms=1000,alpha=0.025,
+                                 restricted, 
+                                 type ='non-randomized'){
   if(ne>n){
     xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
   } else {
@@ -16,17 +18,20 @@ adaptive_permtest_2s <- function(x,y,n1,n,ne,test_statistic,
   gs <- lapply(1:length(xs),function(i) rep(0:1,c(length(xs[[i]]),length(ys[[i]]))))
   xs <- lapply(1:length(xs),function(i) c(xs[[i]],ys[[i]]))
   if(me==m){
-    return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,B=perms))
+    return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,
+                            B=perms,restricted=restricted,type=type))
   }
   A <- permutation_CER(xs[[1]],gs[[1]],xs[[2]],test_statistic,permutations=perms,alpha=alpha)
-  q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms)
+  q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms,restricted=restricted,type=type)
   A>=q
 }
 ##########################
 
 adaptive_permtest2_2s <- function(x,y,n1,n,ne,test_statistic,
                                   m1=n1,m=n,me=ne,perms=1000,alpha=0.025,
-                                  resam=100){
+                                  resam=100,restricted=FALSE,
+                                  type=c('non-randomized'),
+                                  atest_type='midp'){
   if(ne>n){
     xs <- split(x,rep(1:3,c(n1,n-n1,ne-n)))
   } else {
@@ -42,11 +47,11 @@ adaptive_permtest2_2s <- function(x,y,n1,n,ne,test_statistic,
   gs <- lapply(1:length(xs),function(i) rep(0:1,c(length(xs[[i]]),length(ys[[i]]))))
   xs <- lapply(1:length(xs),function(i) c(xs[[i]],ys[[i]]))
   if(me==m){
-    return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,B=perms))
+    return(alpha>=perm_test(xs[[1]],xs[[2]],gs[[1]],gs[[2]],test_statistic,B=perms,restricted=restricted,type=type))
   }
   A <- permutation_CER2(xs[[1]],gs[[1]],xs[[2]],xs[[3]],test_statistic,one_sample=FALSE,restricted=FALSE,
                         permutations=perms,subsamples=resam,alpha=alpha)
-  q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms)
+  q <- perm_test(xs[[2]],xs[[3]],gs[[2]],gs[[3]],test_statistic,B=perms,restricted=restricted,type=type)
   A>=q
 }
 
@@ -85,11 +90,29 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
   } else {
     me <- m
   }
+
+  n_combs <- prod(choose(c(n1+m1,n-n1+m-m1,ne+me),c(n1,n-n1,ne)))
+  allperms <- (n_combs > B)
+  Aother <- ifelse(allperms,'midp','davison_hinkley')
+  
   list(ne = ne,
-       permtest = adaptive_permtest_2s(x,y,n1,n,ne,test_statistic,m1,m,me),
-       permtest_ratio = adaptive_permtest_2s(x,y,n1,n,ne,meanratio,m1,m,me),
-       #        permtest2 = adaptive_permtest2_2s(x,y,n1,n,ne,test_statistic,m1,m,me,resam=resam),
-      invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
+       perm_CERrndmz_Anonrndmz = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                            test=meandiff,cer_type='randomized',atest_type="non-randomized"),
+       perm_CERnonrndmz_Anonrndmz = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                            test=meandiff,cer_type='non-randomized',atest_type="non-randomized"),
+       perm_CERrndmz_Aother = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                            test=meandiff,cer_type='randomized',atest_type=Aother),
+       perm_CERnonrndmz_Aother = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                            test=meandiff,cer_type='non-randomized',atest_type=Aother),
+       perm_ratio_CERrndmz_Anonrndmz =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                                   test=meanratio,cer_type='randomized',atest_type="non-randomized"),
+       perm_ratio_CERnonrndmz_Anonrndmz =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                                   test=meanratio,cer_type='non-randomized',atest_type="non-randomized"),
+       perm_ratio_CERrndmz_Aother =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                                   test=meanratio,cer_type='randomized',atest_type=Aother),
+       perm_ratio_CERnonrndmz_Aother =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
+                                                   test=meanratio,cer_type='non-randomized',atest_type=Aother),
+       invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
       invnorm_wlcx = adaptive_invnorm_wilcoxtest_2s(x,y,n1,n,ne,m1,m,me),
       invnorm_nb=adaptive_invnormtest_negbin_2s(x,y,n1,n,ne,m1,m,me),
        wald = adaptive_waldtest_2s(x,y,n1,n,ne))

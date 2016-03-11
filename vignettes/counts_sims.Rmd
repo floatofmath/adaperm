@@ -162,8 +162,8 @@ n <- 20
 ne <- 25
 x <- r_counts(ne,df=5)
 y <- r_counts(ne,df=5,theta=2)
-adaptive_permtest_2s(x,y,n1,n,ne,meandiff)
-adaptive_permtest_2s(x,y,n1,n,ne,meanratio)
+# adaptive_permtest_2s(x,y,n1,n,ne,meandiff,restricted=FALSE,type='non-randomized')
+# adaptive_permtest_2s(x,y,n1,n,ne,meanratio,restricted=FALSE,type='non-randomized')
 
 adaperm_DR(c(x,y),c(rep(0,ne),rep(1,ne)),n1,n,
            test=meandiff,cer_type='non-randomized',atest_type='midp')
@@ -191,7 +191,26 @@ compare_adaptive_tests_2s(14,28,condpowerrule_counts,
 
 
 #Simulation
+
 ```{r simulation functions}
+# adaperm_DR(c(x,y),c(rep(0,ne),rep(1,ne)),n1,n,
+#            test=meandiff,
+#            cer_type='non-randomized',
+#            atest_type='midp')
+# 
+# for cer_type I would try non-randomized and randomized
+# for atest_type non-randomized and midp could be compared if all
+# permutations are used otherwise you could try davison_hinkley
+# 
+# sample sizes I would try.
+# 
+# n1=5 n=10
+# n1=10 n=20
+# n1=50 n=100
+# 
+# Would be interesting if cer_type='randomized'
+# makes a difference for n1=5.
+
 
 run_scenario_counts <- function(B,...){
     ## just a wrapper around mclapply2
@@ -204,13 +223,18 @@ run_scenario_counts <- function(B,...){
                          test_statistic=scenario$test_statistic,
                          control_opts=list(df=scenario$df,lambda=scenario$lambda),
                          treatment_opts=list(df=scenario$df,theta=scenario$theta,lambda=scenario$lambda))})
+    
     results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),
-                                        permtest=mean(permtest),
-                                       permtRatio=mean(permtest_ratio),
+                                        perm_CERnonrndmz_Anonrndmz = mean(perm_CERnonrndmz_Anonrndmz),
+                                        perm_CERrndmz_Aother =mean(perm_CERrndmz_Aother),
+                                        perm_CERnonrndmz_Aother =mean(perm_CERnonrndmz_Aother),
+                                        perm_ratio_CERrndmz_Anonrndmz = mean(perm_ratio_CERrndmz_Anonrndmz) ,
+                                        perm_ratio_CERnonrndmz_Anonrndmz =  mean(perm_ratio_CERnonrndmz_Anonrndmz),
+                                        perm_ratio_CERrndmz_Aother =  mean(perm_ratio_CERrndmz_Aother),
+                                        perm_ratio_CERnonrndmz_Aother = mean(perm_ratio_CERnonrndmz_Aother),
                                         invnormT=mean(invnorm),
-invnormWlcx=mean(invnorm_wlcx),
-
-invnormNB=mean(invnorm_nb),
+                                        invnormWlcx=mean(invnorm_wlcx),
+                                        invnormNB=mean(invnorm_nb),
                                         wald=mean(wald))#,npcomb=mean(npcomb),permtest=mean(permtest))
 }
 
@@ -230,10 +254,10 @@ set.seed(1)
 scenarios_test <- expand.grid(n1=c(10,20,50),
                               theta= c(1,1.2),
                               lambda=c(5,10),
-                              perms= 1000)
+                              perms= 10)
 scenarios_test$n=scenarios_test$n1*2
 # debug(run_scenario_counts)
-sim_counts_poisson=run_simulation_counts(scenarios_test,B=1000,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=1000)
+sim_counts_poisson=run_simulation_counts(scenarios_test,B=10,rule=condpowerrule_counts,rdist=r_counts,test_statistic=meandiff,resam=10)
 sim_counts_poisson
 save(sim_counts_poisson,file=vfile("../data/sim_counts_poisson",ending="rda"))
 ```
