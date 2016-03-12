@@ -90,35 +90,23 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
   } else {
     me <- m
   }
-browser()
+
   n_combs <- prod(choose(c(n1+m1,n-n1+m-m1,ne+me),c(n1,n-n1,ne)))
   allperms <- (n_combs > perms) #### resam??
   Aother <- ifelse(allperms,'midp','davison_hinkley')
   
   list(ne = ne,
-       perm_CERrndmz_Anonrndmz = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
-                                            test=meandiff,cer_type='randomized',atest_type="non-randomized",
-                                            permutations=perms),
        perm_CERnonrndmz_Anonrndmz = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
                                             test=meandiff,cer_type='non-randomized',atest_type="non-randomized",
                                             permutations=perms),
        perm_CERrndmz_Aother = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
                                             test=meandiff,cer_type='randomized',atest_type=Aother,
                                             permutations=perms),
-       perm_CERnonrndmz_Aother = adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
-                                            test=meandiff,cer_type='non-randomized',atest_type=Aother,
-                                            permutations=perms),
-       perm_ratio_CERrndmz_Anonrndmz =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
-                                                   test=meanratio,cer_type='randomized',atest_type="non-randomized",
-                                                   permutations=perms),
        perm_ratio_CERnonrndmz_Anonrndmz =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
                                                    test=meanratio,cer_type='non-randomized',atest_type="non-randomized",
                                                    permutations=perms),
        perm_ratio_CERrndmz_Aother =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
                                                    test=meanratio,cer_type='randomized',atest_type=Aother,
-                                                   permutations=perms),
-       perm_ratio_CERnonrndmz_Aother =  adaperm_DR(c(x,y),c(rep(0,me),rep(1,ne)),n1=n1,n=n,m1=m1,m=m,
-                                                   test=meanratio,cer_type='non-randomized',atest_type=Aother,
                                                    permutations=perms),
        invnorm = adaptive_invnormtest_2s(x,y,n1,n,ne,m1,m,me),
        invnorm_wlcx = adaptive_invnorm_wilcoxtest_2s(x,y,n1,n,ne,m1,m,me),
