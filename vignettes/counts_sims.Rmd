@@ -227,9 +227,9 @@ run_scenario_counts <- function(B,...){
     
     results %>% bind_rows %>% summarize(ASN=mean(ne),maxSN=max(ne),
                                         perm_CERnonrndmz_Anonrndmz = mean(perm_CERnonrndmz_Anonrndmz),
-                                        perm_CERrndmz_Aother =mean(perm_CERrndmz_Aother),
+                                        perm_CERother_Aother =mean(perm_CERrndmz_Aother),
                                         perm_ratio_CERnonrndmz_Anonrndmz =  mean(perm_ratio_CERnonrndmz_Anonrndmz),
-                                        perm_ratio_CERrndmz_Aother =  mean(perm_ratio_CERrndmz_Aother),
+                                        perm_ratio_CERother_Aother =  mean(perm_ratio_CERrndmz_Aother),
                                         invnormT=mean(invnorm),
                                         invnormWlcx=mean(invnorm_wlcx),
                                         invnormNB=mean(invnorm_nb),
