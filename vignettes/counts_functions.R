@@ -95,10 +95,10 @@ compare_adaptive_tests_2s <- function(n1,n,rule,rdist,
   allperms <- (n_combs > perms) #### resam??
   if(allperms){
     Aother <- 'midp'
-    cer_type <- 
+    cer_type <- "randomized"
       } else {
       Aother <- 'davison_hinkley'
-      cer_type <- 
+      cer_type <- "non-randomized"
       }
 
   list(ne = ne,
