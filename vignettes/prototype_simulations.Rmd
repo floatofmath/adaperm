@@ -24,7 +24,35 @@ options(mc.cores=detectCores()-1)
 
 ```
 
+```{r, eval=F}
+library(Rcpp)
+sourceCpp("../src/combinations.cpp")
+library(microbenchmark)
+## about 90 fold time improvement
+microbenchmark(all_combinations_cpp(16,8),gtools::combinations(16,8))
+microbenchmark(all_reassignments_cpp(16,8),gtools::combinations(16,8))
+null <- all_combinations(24,12)
+## stress test
+replicate(1000,{null <- all_combinations(20,10);NULL})
 
+for(n in 1:24){
+    for(k in 1:n){
+        if(!all(t(all_combinations(n,k)) == gtools::combinations(n,k))){
+            stop(paste('error at n =',n,'k =',k))
+        }
+    }
+}
+    
+for(n in 1:24){
+    for(k in 1:n){
+        if(!all(all_reassignments_cpp(n,k) == adaperm:::all_reassignments(n,k))){
+            stop(paste('error at n =',n,'k =',k))
+        }
+    }
+}
+
+
+```
 # Tests under consideration
 
 We look at three classes of tests:
@@ -93,7 +121,7 @@ adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=maritzm,cer_type='randomized',
 
 ### Small sample scenarios
 
-```{r}
+```{r,eval=F}
 x <- rnorm(10)
 y <- rnorm(10)
 adaptive_invnormtest_2s(x,y,n1=5,n=10,ne=10)
@@ -307,8 +335,8 @@ run_scenario <- function(scenario){
              nE=nE,
              invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
              invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=20000),
-             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type=cete,atest_type=ttpe,permutations=20000))
+             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=10^5),
+             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type=cete,atest_type=ttpe,permutations=10^5))
 #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
 }
@@ -337,7 +365,7 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
                 sigma0 = rep(rep(c(.6,2.5),each=4),2))
                 
 
-
+simulate_scenario(scenarios[2,],10000)
 out <- list() 
 for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 sims <- bind_rows(out)
@@ -347,7 +375,8 @@ sims <- bind_rows(out)
 ```
 
 ```{r}
-load('~/adaperm_simresults/simulations_node5_160311.Rd')
+
+load('../data/simulations_node5_160313.Rd')
 
 pdf('simresults.pdf')
 sims %>% 
