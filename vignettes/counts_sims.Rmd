@@ -300,7 +300,7 @@ pander(sim_counts_poisson,split.tables=100)
 ```{r sim overdispersion,eval=F}
 set.seed(1)
 scenarios_test <- expand.grid(n1=c(5),
-                              theta= c(1,1.652),
+                              theta= c(1,1.4),
                               df = 5,
                               perms= perms)
 scenarios_test$n=scenarios_test$n1*2
@@ -323,7 +323,7 @@ save(sim_countsEQ,file=vfile("../data/sim_countsEQ",ending="rda"))
 ```{r}
 library(pander)
 load(vfile("../data/sim_countsEQ",ending="rda"))
-pander(sim_countsEQ,split.tables=100)
+pander(sim_countsEQ,split.tables=100,digits = 3)
 ```
 
 See the distribution of the samples ASN and maxSN, is fix. furthermore, I can't decrease n1 and n. 
