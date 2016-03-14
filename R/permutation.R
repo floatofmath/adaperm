@@ -7,10 +7,11 @@
 ##' @return integer matrix of size \code{n} x \code{choose(n,k)}
 ##' @author Florian Klinglmueller
 all_reassignments <- function(n,k){
-    N <- choose(n,k)
-    M <- matrix(0L,n,N)
-    M[cbind(as.integer(t(gtools::combinations(n,k))),rep(1:N,each=k))] <- 1L
-    M
+    all_reassignments_cpp(n,k)
+    ## N <- choose(n,k)
+    ## M <- matrix(0L,n,N)
+    ## M[cbind(as.integer(all_combinations_cpp(n,k)),rep(1:N,each=k))] <- 1L
+    ## M
 }
 
 ##' Returns a logical matrix with all possible assignments (e.g. of patients) of \code{n} objects to two groups (e.g. treatment and control)

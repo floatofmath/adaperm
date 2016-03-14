@@ -6,6 +6,30 @@
 
 using namespace Rcpp;
 
+// all_combinations_cpp
+IntegerMatrix all_combinations_cpp(int n, int k);
+RcppExport SEXP adaperm_all_combinations_cpp(SEXP nSEXP, SEXP kSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    __result = Rcpp::wrap(all_combinations_cpp(n, k));
+    return __result;
+END_RCPP
+}
+// all_reassignments_cpp
+LogicalMatrix all_reassignments_cpp(int n, int k);
+RcppExport SEXP adaperm_all_reassignments_cpp(SEXP nSEXP, SEXP kSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    __result = Rcpp::wrap(all_reassignments_cpp(n, k));
+    return __result;
+END_RCPP
+}
 // diffmeanC
 NumericVector diffmeanC(NumericVector x, IntegerMatrix g);
 RcppExport SEXP adaperm_diffmeanC(SEXP xSEXP, SEXP gSEXP) {
@@ -64,41 +88,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type k(kSEXP);
     Rcpp::traits::input_parameter< const int >::type nsam(nsamSEXP);
     __result = Rcpp::wrap(random_samples_cpp(xs, k, nsam));
-    return __result;
-END_RCPP
-}
-// combinations_cpp
-IntegerMatrix combinations_cpp(const int n, const int k);
-RcppExport SEXP adaperm_combinations_cpp(SEXP nSEXP, SEXP kSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< const int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< const int >::type k(kSEXP);
-    __result = Rcpp::wrap(combinations_cpp(n, k));
-    return __result;
-END_RCPP
-}
-// subsamples_cpp
-NumericMatrix subsamples_cpp(NumericVector xs, const int k);
-RcppExport SEXP adaperm_subsamples_cpp(SEXP xsSEXP, SEXP kSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericVector >::type xs(xsSEXP);
-    Rcpp::traits::input_parameter< const int >::type k(kSEXP);
-    __result = Rcpp::wrap(subsamples_cpp(xs, k));
-    return __result;
-END_RCPP
-}
-// bincombinations_cpp
-IntegerMatrix bincombinations_cpp(const int p);
-RcppExport SEXP adaperm_bincombinations_cpp(SEXP pSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< const int >::type p(pSEXP);
-    __result = Rcpp::wrap(bincombinations_cpp(p));
     return __result;
 END_RCPP
 }
