@@ -325,6 +325,7 @@ run_scenario <- function(scenario){
                         't4'=parameter,
                         'cont'=1)[distribution]
              nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
+             
              n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
                                         #ttpe  <- ifelse(n_combs>10000,'davison_hinkley','midp')
              ttpe <- 'non-randomized'
@@ -365,7 +366,8 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
                 sigma0 = rep(rep(c(.6,2.5),each=4),2))
                 
 
-simulate_scenario(scenarios[2,],10000)
+simulate_scenario(scenarios[2,],1000)
+run_scenario(scenarios[2,])
 out <- list() 
 for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 sims <- bind_rows(out)
