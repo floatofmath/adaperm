@@ -37,7 +37,7 @@ adaptive_permdr <- function(x1,x2,xE,
     if(atest_type == 'CER'){
         return(A)
     } else {
-        return(A >= perm_test(x2,xE,g2,gE,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
+        return(A > perm_test(x2,xE,g2,gE,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
     }
 }
 .cer_types = c("non-randomized","randomized","uniform")
