@@ -146,6 +146,8 @@ omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000){
 ##' Compute the conditional permutation distribution given first stage group assignments
 ##'
 ##' Second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used.
+##'
+##' In contrast to \code{\link{perm_dist}} \code{cond_dist} does not add the original test statistic if less than all possible permutations are generated.
 ##' 
 ##' @title Conditional permutations distribution
 ##' @param x1 First stage data
@@ -159,18 +161,18 @@ omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000){
 ##' @return numeric vector 
 ##' @author Florian Klinglmueller
 cond_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
-    omega <- omega(g2,g3,restricted=restricted,B=B)
+    omega <- omega(g2,g3,restricted=restricted,B=B)[,-1]
     omega <- rbind(matrix(g1,nrow=length(g1),ncol=ncol(omega)),omega)
     stat(c(x1,x2,x3),omega)
 }
 
 
 
-##' Compute the conditional permutation distribution given first stage group assignments
+##' Compute the permutation distribution given observations and a test statistic.
 ##'
-##' First, second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used.
+##' First, second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of permutations is less than the number of all possible permutations the test observed test statistic will be added to the result such that $B+1$ values will be returned. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used. 
 ##' 
-##' @title Conditional permutations distribution
+##' @title Permutation distribution
 ##' @param x1 First stage data
 ##' @param x2 Second stage data
 ##' @param g1 (Dummy) first stage treatment assignments

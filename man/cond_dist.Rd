@@ -32,6 +32,8 @@ Compute the conditional permutation distribution given first stage group assignm
 }
 \details{
 Second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used.
+
+In contrast to \code{\link{perm_dist}} \code{cond_dist} does not add the original test statistic if less than all possible permutations are generated.
 }
 \author{
 Florian Klinglmueller

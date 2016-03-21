@@ -2,7 +2,7 @@
 % Please edit documentation in R/permutation.R
 \name{perm_dist}
 \alias{perm_dist}
-\title{Conditional permutations distribution}
+\title{Permutation distribution}
 \usage{
 perm_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
   restricted = TRUE)
@@ -30,10 +30,10 @@ perm_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
 numeric vector
 }
 \description{
-Compute the conditional permutation distribution given first stage group assignments
+Compute the permutation distribution given observations and a test statistic.
 }
 \details{
-First, second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used.
+First, second and third stage treatment assignments are only passed to define the second stage sample size and the sizes of the corresponding (treatment) groups. If the number of permutations is less than the number of all possible permutations the test observed test statistic will be added to the result such that $B+1$ values will be returned. If the number of requested permutations \code{B} is larger than the number of all possible permutations, only the latter will be used.
 }
 \author{
 Florian Klinglmueller
