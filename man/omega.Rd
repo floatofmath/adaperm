@@ -4,7 +4,8 @@
 \alias{omega}
 \title{Reference space}
 \usage{
-omega(g1, g2 = NULL, g3 = NULL, restricted = TRUE, B = 1000)
+omega(g1, g2 = NULL, g3 = NULL, restricted = TRUE, B = 1000,
+  add_obs = TRUE)
 }
 \arguments{
 \item{g1}{First stage treatment assignments}
@@ -16,6 +17,8 @@ omega(g1, g2 = NULL, g3 = NULL, restricted = TRUE, B = 1000)
 \item{restricted}{Whether group sizes are considered fixed}
 
 \item{B}{Number of permutations to be used (if smaller than all permutations)}
+
+\item{add_obs}{should the identity permutation be added}
 }
 \value{
 integer matrix

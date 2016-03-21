@@ -131,16 +131,17 @@ strat_reassignments <- function(ns,ks,restricted=TRUE,B=NULL){
 ##' @param g3 Third stage treatment assignments
 ##' @param restricted Whether group sizes are considered fixed
 ##' @param B Number of permutations to be used (if smaller than all permutations)
+##' @param add_obs should the identity permutation be added
 ##' @return integer matrix 
 ##' @author Florian Klinglmueller
 ##'
 ##' @export
-omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000){
+omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000,add_obs=TRUE){
     ns <- sapply(list(g1,g2,g3),length)
     ks  <- sapply(list(g1,g2,g3),function(g) sum(g>0))
     ps <- strat_reassignments(ns,ks,restricted=restricted,B=B)
     n_combs <- ifelse(restricted,prod(choose(ns,ks)),prod(2^ns))
-    if(n_combs > B) cbind(c(g1,g2,g3),as.matrix(ps)) else as.matrix(ps)
+    if(n_combs > B & add_obs) cbind(c(g1,g2,g3),as.matrix(ps)) else as.matrix(ps)
 }
 
 ##' Compute the conditional permutation distribution given first stage group assignments
@@ -161,7 +162,7 @@ omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000){
 ##' @return numeric vector 
 ##' @author Florian Klinglmueller
 cond_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
-    omega <- omega(g2,g3,restricted=restricted,B=B)[,-1]
+    omega <- omega(g2,g3,restricted=restricted,B=B,add_obs=FALSE)
     omega <- rbind(matrix(g1,nrow=length(g1),ncol=ncol(omega)),omega)
     stat(c(x1,x2,x3),omega)
 }
