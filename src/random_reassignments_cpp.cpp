@@ -18,6 +18,18 @@ static inline NumericVector sampleNum(NumericVector xs, int k) {
   return xs;
 }
 
+// Not implemented due to C++11 support problems
+// // [[Rcpp::export]]
+// IntegerVector sample_cpp(IntegerVector g,const int nperm=1000,int seed = 221202){
+//   IntegerVector gg = clone(g);
+//   int i, p=1, n = gg.size();
+//   IntegerMatrix ans(n,nperm);
+//   std::mt19937 rng(seed);
+//   for (i = 0; i<nperm; i++){
+//     ans(_,i) = std::shuffle(gg.begin(),gg.end(),rng);
+//   }
+//   return ans;
+// }
 
 // [[Rcpp::export]]
 IntegerMatrix random_reassignments_cpp(const IntegerVector g, const int nperm=1000) {

@@ -124,7 +124,7 @@ test_that("permutation CER",
 pd <- perm_dist(x1,x2,g1,g2,sumdiff,1000)
 qs <- runif(1000)
 ta <- sapply(qs,p2t,dist=pd)
-pt <- sapply(ta+0.001,t2p,dist=pd,type='midp')
+pt <- sapply(ta+0.001,t2p,dist=pd,type='davison_hinkley')
 test_that("permutation p-value and T_alpha",
           {
               expect_true(all(pt<=qs))

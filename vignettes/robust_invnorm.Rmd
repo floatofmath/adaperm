@@ -10,6 +10,10 @@ vignette: >
   \usepackage[utf8]{inputenc}
 ---
 
+```{r,echo=F,results='hide'}
+knitr::opts_chunk$set(eval=FALSE,echo=FALSE,warning=FALSE,results='hide',fig.width=7,fig.height=7,message=FALSE)
+```
+
 During a recent investigation we found that the inverse normal
 combination test of stage-wise $t$-tests performs surprisingly well if
 the parent distribution is not normal. It is well known that the
@@ -74,7 +78,7 @@ save(nonadaptive,file="nonadaptive.rda")
 Some comments the Wilcoxon test is actually much better that the
 t-test and also than the invnorm test.
 
-```{r}
+```{r,results='markup',eval=T}
 load("~/repos/adaperm/vignettes/nonadaptive.rda")
 pander(nonadaptive)
 ```
@@ -87,7 +91,7 @@ c(invnormM = mclapply2(1:B,function(i) adaptive_invnormtest_os(data[,i],15,30,40
   permWs = mclapply2(1:B,function(i) adaptive_permtest_os(data[,i],10,20,40,signedranks,perms=10000),mc.progress=F) %>% unlist %>% mean) -> adaptive
 save(adaptive,file="adaptive.rda")
 ```
-```{r}
+```{r,results='markup',eval=T}
 load("~/repos/adaperm/vignettes/adaptive.rda")
 pander(adaptive)
 ```
@@ -116,32 +120,12 @@ c(subsWM = mclapply2(1:B,function(i) adaptive_permtest2_os(data[,i],15,30,40,sig
 save(subsampling,file="subsampling.rda")
 ```
 
-```{r}
+```{r,results='markup',eval=T}
 load("~/repos/adaperm/vignettes/subsampling.rda")
 pander(subsampling)
 ```
 
-
-------------------------------------------------------------
- permW   permT   apermW   apermT   invnorm   ttest   wilcox 
-------- ------- -------- -------- --------- ------- --------
- 0.852   0.82    0.854    0.823     0.817    0.819   0.856  
-------------------------------------------------------------
-
----------------------------------------------------------
- invnormM   permTM   permWM   invnormS   permTS   permWs 
----------- -------- -------- ---------- -------- --------
-  0.816     0.818     0.83     0.802     0.773     0.8   
----------------------------------------------------------
-
------------------
- subsWM   subsWs 
--------- --------
- 0.831    0.805 
------------------
-
-
-The subsampling approach may be further improved using a
+1. The subsampling approach may be further improved using a
 bootstrap procedure that also takes into account samples from the
 first stage. The latter approach may be problematic as this introduces
 dependeny between first and second stage data.
@@ -152,14 +136,13 @@ second stage ranks. Here the idea is to draw ranks for the second
 stage by keeping the order of the first stage ranks as well as the
 observed first stage signs.
 
-
 See below for one stap of the sampling process for the second stage
 data.
 
 We need to assume that the probability of the second stage data to
 fall between any of the first stage observations is the same. This
 obviously does not hold for all parent distributions! A way out may be
-bootstrap?
+bootstrap? - Eventhough Werner claims that just that is true.
 
 
 ```{r,eval=F}
@@ -175,12 +158,18 @@ r2 <- rank(c(r2,r1*10))[1:10]
 ```
 
 
-## Why is the inverse normal test better when the second stage is
-   large?
+## Why is the inverse normal combination test better when the second
+   stage is large?
 
-```{r}
+I guess it is because with the conditional error rate approach the
+discreteness of the permutation distributions is fixed, while for the
+combination test the second stage distribution gets less discrete
+with increasing second stage sample sizes.
 
+This should go away using subsampling but it doesn't. We need to look
+into this further (e.g. estimating the CER of a randomized test)
 
+```{r,eval=F}
 
 
 compare_adaptive_tests <- function(i,n1=15,n=30,ne,rdist,permutations=100){
