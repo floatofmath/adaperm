@@ -327,26 +327,33 @@ run_scenario <- function(scenario){
              nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
              
              n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
-                                        #ttpe  <- ifelse(n_combs>10000,'davison_hinkley','midp')
+             exact  <- n_combs>10^5
+                                        #  <- ifelse(n_combs>10000,'davison_hinkley','midp')
              ttpe <- 'non-randomized'
              cete <- 'non-randomized'
              x <- c(x1,xdist(nE-n1))
              y <- c(y1,ydist(nE-n1))
              data_frame(
-             nE=nE,
-             invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
-             invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-             adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=10^5),
-             adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type=cete,atest_type=ttpe,permutations=10^5))
-#             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
+                 exact=exact,
+                 nE=nE,
+                 fixed_t=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),tstat,10^5,restricted=T)<=0.025,
+                 fixed_w=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),ranksum,10^5,restricted=T)<=0.025,
+                 invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
+                 invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
+                 adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=10^5),
+                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type=cete,atest_type=ttpe,permutations=10^5))
+                                        #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
 }
 
 simulate_scenario <- function(scenario,B){
     bind_rows(mclapply2(1:B,function(i) run_scenario(scenario))) %>%
-        summarise(ASN = mean(nE),
+        summarise(pExact = mean(exact),
+                  ASN = mean(nE),
                   sdSN = sd(nE),
                   MSN = max(nE),
+                  fixed_t = mean(fixed_t),
+                  fixed_w = mean(fixed_w),
                   invnorm_t=mean(invnorm_t),
                   invnorm_w=mean(invnorm_w),
                   adaperm_t=mean(adaperm_t),
@@ -365,29 +372,82 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
                 delta0 = rep(0:1,each=8),
                 sigma0 = rep(rep(c(.6,2.5),each=4),2))
                 
-
-simulate_scenario(scenarios[2,],1000)
-run_scenario(scenarios[2,])
+## simulate_scenario(scenarios[2,],1000)
+## simulate_scenario(scenarios[10,],5000)
+## run_scenario(scenarios[2,])
+## run_scenario(scenarios[10,])
 out <- list() 
-for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
+for(i in 2:4) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=50000))
 sims <- bind_rows(out)
-#save(sims,file=vfile('~/adaperm_simresults/simulations'))
+#for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
+
+save(sims,file=vfile('~/adaperm_simresults/null_simulations'))
 
 
 ```
 
 ```{r}
 
-load('../data/simulations_node5_160313.Rd')
+load('../data/simulations_node5_160319.Rd')
 
-pdf('simresults.pdf')
-sims %>% 
-    melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>%
+pdf('simresults.pdf',height=4,width=7)
+sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
+    melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>% 
         ggplot(aes(distribution,Power,fill=Test))+geom_bar(stat='identity',position='dodge')+facet_grid(delta0~n1,scales='free_y')
 dev.off()
 
 sims %>% melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>%
     subset(delta0==0) %>% dcast(Test~n1+distribution,value.var='Power')
 
+
+```
+
+
+```{r simulations for pauly}
+set.seed(10514)
+library(flip)
+B <- 1000
+n <- 20
+X0 <- matrix(rt(n*B,df=2),n)
+X <- matrix(rt(n*B,df=2),n)+1
+
+
+ttests0 <- apply(X0,2,t.test,alternative='greater')
+ttests0_pvalues <- sapply(ttests0,`[[`,'p.value')
+ttests <- apply(X,2,t.test,alternative='greater')
+ttests_pvalues <- sapply(ttests,`[[`,'p.value')
+
+
+comb10 <- apply(X0[1:(n/2),],2,t.test,alternative='greater')
+comb10_pvalues <- sapply(comb10,`[[`,'p.value')
+comb20 <- apply(X0[(n/2+1):n,],2,t.test,alternative='greater')
+comb20_pvalues <- sapply(comb20,`[[`,'p.value')
+comb0_pvalues <- pnorm(sqrt(.5)*(qnorm(comb10_pvalues,lower=F)+qnorm(comb20_pvalues,lower=F)),lower=F)
+
+comb1 <- apply(X[1:(n/2),],2,t.test,alternative='greater')
+comb1_pvalues <- sapply(comb1,`[[`,'p.value')
+comb2 <- apply(X[(n/2+1):n,],2,t.test,alternative='greater')
+comb2_pvalues <- sapply(comb2,`[[`,'p.value')
+comb_pvalues <- pnorm(sqrt(.5)*(qnorm(comb1_pvalues,lower=F)+qnorm(comb2_pvalues,lower=F)),lower=F)
+
+permtests0 <- flip(X0,statTest='t',tail=1,perms=10000)
+permtests0_pvalues <- permtests0@res$`p-value`
+permtests <- flip(X,statTest='t',tail=1,perms=10000)
+permtests_pvalues <- permtests@res$`p-value`
+
+wilctests0 <- flip(X0,statTest='Wilcoxon',tail=1,perms=10000)
+wilctests0_pvalues <- wilctests0@res$`p-value`
+wilctests <- flip(X,statTest='Wilcoxon',tail=1,perms=10000)
+wilctests_pvalues <- wilctests@res$`p-value`
+
+mean(ttests0_pvalues<=.05)
+mean(permtests0_pvalues<=.05)
+mean(comb0_pvalues<=.05)
+mean(wilctests0_pvalues<=.05)
+
+mean(ttests_pvalues<=.05)
+mean(permtests_pvalues<=.05)
+mean(comb_pvalues<=.05)
+mean(wilctests_pvalues<=.05)
 
 ```
