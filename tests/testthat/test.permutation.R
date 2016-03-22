@@ -85,7 +85,9 @@ x2 <- rep(c(1,-1),n1/2)
 g2 <- rep(c(-1,1),each=n1/2)
 test_that("Permutation test",
           {
-              expect_equivalent(perm_test(x1,x2,g1,g2,sumdiff,100000),.75)
+              expect_equivalent(perm_test(x1,x2,g1,g2,sumdiff,100000,restricted=T),.75)
+              expect_equivalent(perm_test(x1,x2,g1,g2,sumdiff,100000,restricted=T,type='midp'),.5)
+              expect_equivalent(perm_test(x1,x2,g1,g2,sumdiff,100000,restricted=T,type='davison_hinkley'),10/19)
           })
           
 ## test t_test
@@ -101,6 +103,8 @@ test_that("t-test",
           }
           )
 
+
+
 ## test permutation cer
 n <- 12
 n1 <- 6
@@ -110,5 +114,19 @@ x2 <- rep(c(-1,1),each=n1/2)
 g2 <- rep(c(-1,1),each=n1/2)
 test_that("permutation CER",
           {
-              expect_equivalent(permutation_CER(x1,g1,x2,B=100000),0.5)
+              expect_equivalent(permutation_cer(x1,x2,g1,test_statistic=sumdiff,permutations=100000,alpha=.025,restricted=T),0.05)
+              expect_equivalent(permutation_cer(x1,x2,g1,test_statistic=sumdiff,permutations=100000,alpha=.025,restricted=T,cer_type='randomized'),0.275)
+              expect_equivalent(adaperm_DR(c(x1,x2),g1,n1=3,n=6,test_statistic=sumdiff,atest_type='CER'),0.05)
           })
+
+
+## test t2p
+pd <- perm_dist(x1,x2,g1,g2,sumdiff,1000)
+qs <- runif(1000)
+ta <- sapply(qs,p2t,dist=pd)
+pt <- sapply(ta+0.001,t2p,dist=pd,type='midp')
+test_that("permutation p-value and T_alpha",
+          {
+              expect_true(all(pt<=qs))
+          })
+          

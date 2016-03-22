@@ -68,7 +68,7 @@ adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_typ
         obs <- split_sample_os(x,n1,n)
     } else {
         restricted  <- TRUE
-        if(length(g) == m1+n1 && cer_type=='CER'){
+        if(length(g) == m1+n1 && atest_type=='CER'){
             ## if we only want to know the CER
             g <- c(g,rep(0,n-n1),rep(1,m-m1))
         }        

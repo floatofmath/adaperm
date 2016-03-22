@@ -8,6 +8,7 @@ Depends:
     matrixStats
 Suggests:
     testthat
+Imports: Rcpp
 LinkingTo: Rcpp, RcppArmadillo
 License: MIT
 LazyData: true

@@ -21,7 +21,7 @@ all_reassignments <- function(n,k){
 ##' @return integer matrix of size \code{n} x \code{2^n}
 ##' @author Florian Klinglmueller
 all_assignments <- function(n){
-    t(e107::combinations_cpp(n))
+    t(e1071::bincombinations(n))
 }
 
 ##' Returns a logical matrix with B random assignments (e.g. of patients) of \code{n} objects to two groups (e.g. treatment and control)
@@ -218,7 +218,7 @@ t2p  <- function(t,dist,type=c('non-randomized','midp','randomized','davison_hin
 ##' @return critical value
 ##' @author Florian Klinglmueller
 p2t <- function(p,dist){
-    max(dist[rank(-dist,ties='min') >= p*length(dist)])
+    max(dist[rank(-dist,ties='max') >= p*length(dist)])
 }
 
 

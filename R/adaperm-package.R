@@ -7,4 +7,5 @@
 #' @docType package
 #' @name adaperm-package
 #' @useDynLib adaperm
+#' @importFrom Rcpp evalCpp
 NULL
