@@ -362,7 +362,8 @@ run_scenario <- function(scenario){
 
 simulate_scenario <- function(scenario,B){
     bind_rows(mclapply2(1:B,function(i) run_scenario(scenario))) %>%
-        summarise(pExact = mean(exact),
+        summarise(B=B,
+                  pExact = mean(exact),
                   ASN = mean(nE),
                   sdSN = sd(nE),
                   MSN = max(nE),
@@ -372,7 +373,8 @@ simulate_scenario <- function(scenario,B){
                   invnorm_w=mean(invnorm_w),
                   adaperm_t=mean(adaperm_t),
                   adaperm_w=mean(adaperm_w),
-                  adaperm_rw=mean(adaperm_rw))
+                  adaperm_rw=mean(adaperm_rw),
+                  adaperm_rwp=mean(adaperm_rwp))
 #                  adaperm_m=mean(adaperm_m))
 }
 ```
@@ -392,11 +394,11 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4)),2),
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[10,])
 out <- list() 
-for(i in c(1:4,9:12)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=5000))
+for(i in c(9:12)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=50000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 
-save(sims,file=vfile('~/adaperm_simresults/null_simulations'))
+save(sims,file=vfile('~/adaperm_simresults/alt_simulations'))
 
 
 ```
