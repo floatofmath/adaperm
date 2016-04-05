@@ -2,12 +2,19 @@
 title: "Permutation tests for adaptive designs"
 subtitle: "Refactoring of simulation studies"
 author: Florian Klinglmueller
-output: rmarkdown::html_vignette
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteIndexEntry{Vignette Title}
   \usepackage[utf8]{inputenc}
+output:
+    pdf_document:
+        keep_tex: true
+    rmarkdown::html_vignette: default
 ---
+
+```{r,echo=F,results='hide'}
+knitr::opts_chunk$set(echo=FALSE,warning=FALSE,results='hide',fig.width=7,fig.height=7,message=FALSE)
+```
 
 ```{r}
 library(magrittr)
@@ -53,26 +60,31 @@ for(n in 1:24){
 
 
 ```
-# Tests under consideration
+# Simulation setup
+
+## Tests under consideration
 
 We look at three classes of tests:
 
 1. **Inverse-normal combination tests**
-   1. Equal variance $t$-test 
-   2. Stage-wise Wilcoxon Rank-sum tests
-
+   - Equal variance $t$-test 
+   - Stage-wise Wilcoxon Rank-sum tests
 2. **Permutation based conditional error tests**
-   1. Permutation test using $t$-statistic
-   2. Permutation test using Wilcoxon Rank-sum statistic
-   3. Permutation test using Maritz-m statistic
-
-3. **Nonparametric combination test**
-   1. Permutation test using $t$-statistic
-   2. Permutation test using Wilcoxon Rank-sum statistic
-   3. Permutation test using Maritz-m statistic
+   - Permutation test using $t$-statistic
+   - Permutation test using Wilcoxon Rank-sum statistic
 
 
-# Distributions
+For the permutation test using the Wilcoxon Rank-sum statistic  we
+additionally consider conditional error functions:
+
+1. Based on the conservative preplanned permutation test
+2. Based on the exact randomized preplanned permutation test,
+   applying a conservative second stage test
+3. Based on the exact randomized preplanned permutation test,
+   applying a mid-$p$ value based second stage test
+
+
+## Distributions
 
 Naturally we need to consider the Normal distribution. Proschan
 considers the following distributions:
@@ -88,36 +100,61 @@ Gorman considers the following distributions:
 - symmetric bimodal
 - skewed bimodal
 
+
+We consider:
+
+1. normal distirbution
+2. log-gamma distribution
+3. t-distribution with 4 degrees of freedom
+4. contaminated normal distribution with 10\% of observations sampled
+   from a normal with three-times higher standard deviation
+
 For all distributions we will study a scenario under the null, and two
 scenarios under the alternative - one where the *Inverse-normal
 combination $t$-test* has 60% power with a preplanned total per-group
-sample size of 10, the other where it achieves 80% power with a
+sample size of 10, the other where it achieves 60% power with a
 preplanned total per-group sample size of 100. 
 
-# Sample size reassessment
+## Sample size reassessment
 
 In all cases we will apply a sample size reassessment rule based on
 a conditional power rule that reestimates the sample size based on an
 unblinded estimate of the variance. 
 
 
-# Code
+# Calibration of scenarios
 
 ## Test procedure
 
-```{r}
+Tests where performed using functions implemented in `adaperm`. See
+the code below for examples how to perform the different test an
+example with 16 preplanned observations per group that is reassessed
+to collect and additional 4 observations per group after the end of
+the preplanned trial. 
+
+
+```{r,echo=T}
 x <- rnorm(20)
 y <- rnorm(20)
 
 adaptive_invnormtest_2s(x,y,n1=8,n=16,ne=20)
 adaptive_invnorm_wilcoxtest_2s(x,y,n1=8,n=16,ne=20)
-adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=tstat,cer_type='randomized',atest_type='midp')
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=tstat)
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum)
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum,cer_type='randomized')
 adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum,cer_type='randomized',atest_type='midp')
-adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=maritzm,cer_type='randomized',atest_type='midp')
     
 ```
 
 ## Distributions
+
+The parameters of the distributions are calibrated using a manual
+intersection search to give the desired operational
+characteristics. That is 60\% and 80\% power using the inverse-normal
+t-test with a preplanned sample size of 10 or 100 observations per
+group. The parameters for the 80\% power scenario will be considered
+the planning assumptions, for the 60\% power scenario will be used to
+sample observations.
 
 ### Small sample scenarios
 
@@ -169,10 +206,10 @@ r_counts <- function(n,theta=1,df=2,lambda=NULL){
   y
 }
 
-
+#This concludes the configuration of the small sample setup.
 ```
 
-This concludes the configuration of the small sample setup.
+
 
 In all situations our planning assumption is normally distributed
 observations with mean difference of $\delta_0=1$ and common standard deviation
@@ -286,9 +323,9 @@ mean(replicate(10000,{ncp <- 1
                       sqrt(pooled_variance(c(x,y),rep(0:1,each=100)))}))
                       
 
-
+#This concludes the configuration of the large sample setup.
 ```
-This concludes the configuration of the large sample setup.
+
 
 In all situations our planning assumption is normally distributed
 observations with mean difference of $\delta_0=1$ and common standard deviation
@@ -306,7 +343,75 @@ in all cases the inverse normal combination test has a (simulated)
 power of 60%.
 
 
-# Simulation study
+```{r,eval=F}
+
+distribution <- data_frame('Distribution'='Normal',
+                           'Scenario'='Null',
+                           'Sample-size'='Small',
+                           'Data'=rnorm(10^6,0,.9))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='Normal',
+                                     'Scenario'='Alternative',
+                                     'Sample-size'='Small',
+                                     'Data'=rnorm(10^6,1,.9)))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='Log-gamma',
+                                     'Scenario'='Null',
+                                     'Sample-size'='Small',
+                                     'Data'=log(rgamma(10^6,1))))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='Log-gamma',
+                                     'Scenario'='Alternative',
+                                     'Sample-size'='Small',
+                                     'Data'=log(rgamma(10^6,1))+1.35))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='t',
+                                     'Scenario'='Null',
+                                     'Sample-size'='Small',
+                                     'Data'=rt(10^6,4,0)))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='t',
+                                     'Scenario'='Alternative',
+                                     'Sample-size'='Small',
+                                     'Data'=rt(10^6,4,1.2)))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='Contaminated',
+                                     'Scenario'='Null',
+                                     'Sample-size'='Small',
+                                     'Data'=rnorm_cont(10^6,mean=0,sd=.8,cprop=.1,cshift=0,csd=3*.8)))
+distribution <- bind_rows(distribution,
+                          data_frame('Distribution'='Contaminated',
+                                     'Scenario'='Alternative',
+                                     'Sample-size'='Small',
+                                     'Data'=rnorm_cont(10^6,mean=1,sd=.8,cprop=.1,cshift=0,csd=3*.8)))
+
+
+rec_relevel <- function(factor,levels){
+    if(length(levels) == 1){
+        relevel(factor,levels)
+    } else {
+        rec_relevel(relevel(factor,tail(levels,1)),head(levels,-1))
+    }
+}
+
+
+distribution %<>% mutate(Scenario = relevel(factor(Scenario),'Null'))
+distribution %<>% mutate(Distribution = rec_relevel(factor(Distribution),c('Normal','Log-gamma','Contaminated')))
+
+distribution %>% group_by(Distribution,Scenario) %>% summarize(sd=sd(Data))
+
+#distribution %<>% group_by(Distribution,Scenario) %>% mutate(Data = Data/sd(Data))
+
+distribution_plot <- ggplot(distribution,aes(x=Data))+geom_line(aes(lty=Scenario),stat='density')+facet_wrap(~Distribution)+xlim(-7,10)+theme_minimal()
+
+cairo_ps('distributions.eps')
+print(distribution_plot)
+dev.off()
+
+```
+
+# Simulation results
+
 
 ```{r}
 
@@ -327,7 +432,7 @@ run_scenario <- function(scenario){
                         'normal'=rnorm(N,m=delta0,sd=parameter),
                         'log-gamma'=log(rgamma(N,1))+delta0*parameter,
                         't4'=rt(N,4,ncp=delta0*parameter),
-                        'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=delta0,csd=3*parameter),
+                        'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
                         'count'=)
              }
              x1 <- xdist(n1)
@@ -402,25 +507,122 @@ save(sims,file=vfile('~/adaperm_simresults/alt_simulations'))
 
 
 ```
+For each scenario we simulated 50000 trials. For each trial we
+computed the test decision of each test procedure where computed. Permutation
+test used a maximum of 10^5 permutations for the computation of the
+permutation distribution.
+
+Simulations for the small sample scenarios took about a day using 30
+cores of our simulation server. Simulations for the large sample
+scenarios took up to one week using 30 cores of our simulation
+server. This is due to the fact that for the small sample scenarios we
+often do not need to perform computations for all 10^5 permutations
+since the complete permutation space if often smaller.
+
 
 ```{r}
+options(dplyr.width=120)
+load('../data/null_simulations_node1_160323.Rd')
+small_null_50k <- sims
+load('../data/alt_simulations_node5_160323.Rd')
+small_alt_50k <- sims
+load('../data/null_simulations_large_node5_160327.Rd')
+large_null_50k <- sims
+load('../data/alt_simulations_large_node1_160330.Rd')
+large_alt_50k <- sims
 
-load('../data/simulations_node5_160319.Rd')
+sims <- bind_rows(small_null_50k,
+                  small_alt_50k,
+                  large_null_50k,
+                  large_alt_50k)
 
-pdf('simresults.pdf',height=4,width=7)
-sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
-    melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>% 
-        ggplot(aes(distribution,Power,fill=Test))+geom_bar(stat='identity',position='dodge')+facet_grid(delta0~n1,scales='free_y')
-dev.off()
+## pdf('simresults.pdf',height=4,width=7)
+## sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
+##     melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>% 
+##         ggplot(aes(distribution,Power,fill=Test))+geom_bar(stat='identity',position='dodge')+facet_grid(delta0~n1,scales='free_y')
+## dev.off()
 
-sims %>% melt(.,id.vars=1:9,value.name='Power',variable.name='Test') %>%
-    subset(delta0==0) %>% dcast(Test~n1+distribution,value.var='Power')
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0==0 & n1==5) %>% dcast(distribution~Test,value.var='Power') -> small_null_tab
+
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0>0 & n1==5) %>% dcast(distribution~Test,value.var='Power') -> small_alt_tab
+
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0==0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_null_tab
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0>0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_alt_tab
 
 
 ```
 
+## Type 1 error
 
-```{r simulations for pauly}
+```{r,results='markup'}
+pander(small_null_tab,split.table=3000,digits=3,caption='Simulations of small sample scenarios under the null hypothesis')
+
+```
+```{r,results='markup'}
+pander(large_null_tab,split.table=3000,digits=3,caption='Simulations of large sample scenarios under the null hypothesis')
+```
+We see that the Type I error rate is essentially controlled for all
+scenarios. Small deviations from the nominal level are due to
+simulation error. Even the test using the mid-$p$-value in the
+second-stage test seem to control the Type I error rate.
+
+
+## Power
+
+```{r,results='markup'}
+pander(small_alt_tab,split.table=3000,digits=3,caption='Simulations of small sample scenarios under the alternative hypothesis')
+```
+
+Looking at the power there are large differences between the small and
+large sample scenarios. In the small sample scenarios the inverse
+normal combination Wilcoxon test performs really bad, this is due to
+the extreme discreteness of the conditional null distribution when the
+test is applied stage-wise with only 5 observations per
+group. Consequently applying an inverse normal combination t-test
+outperforms the non-parametric test even for non-normal
+observations. The conditional error based permutation test is 
+affected by the small sample sizes to a much smaller degree and
+outperforms the t-test for all but the normal scenario. The inverse
+normal combination t-test and the conditional error permutation test
+show similar performance in all secnarios. Using the conditional error
+rate of a randomized pre-planned test adds on average 0.4 percentage
+points to the power of the test procedure, performing the second stage
+test using test based on the mid-$p$ value adds almost anothe
+percentage point to the power. In comparison to the inverse normal
+combination t-test we gain between 1 percentage point (normally
+distributed observations) and 3 percentage points
+(log-gamma, contaminated normal) in power.
+
+
+
+```{r,results='markup'}
+pander(large_alt_tab,split.table=3000,digits=3,caption='Simulations of large sample scenarios under the alternative hypothesis')
+```
+
+In the large sample scenario the inverse normal combination and
+conditional error permutation test procedure perform very similar
+under the alternative. Test procedures based on the $t$-Statistic are
+outperformed by Wilcoxon type tests for all but the normal
+scenario. The conditional error permutation test based on the wilcoxon
+statistic outperform the combination tests by a small margin $.1$
+percentage points. For the $t$-statistic it is the other way around. 
+We conjecture that due to the asymptotic normality of the
+$t$-statistic the inverse-normal combination is closer to the actual
+conditional error rate of the preplanned test whereas the conditional
+error permutation test uses the less efficient
+"conditional-conditional" error rate. This difference may be reduced
+using a sub-sampling approach to compute average the
+'conditional-coniditional'-error rate over many subsamples - with the
+size of the preplanned second stage - of an extended second stage,
+which asymptotically (though requiring the sample size extension going
+to inifinity) converges to the unconditional conditional error rate.
+
+
+```{r simulations for pauly,eval=F}
 set.seed(10514)
 library(flip)
 B <- 1000

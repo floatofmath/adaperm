@@ -93,7 +93,7 @@ rnorm_hetero <- function(n,df=1,ncp=0){
 ##' @export
 rnorm_cont <- function(n,mean=0,sd=1,cprop=.1,cshift=3,csd=sd){
     cont <- sample(-1:1,n,prob=c(cprop/2,1-cprop,cprop/2),replace=TRUE)
-    out <- rnorm(n,mean=mean,sd=sd) * (csd/sd)^abs(cont) + cshift*cont
+    out <- rnorm(n,sd=sd) * (csd/sd)^abs(cont) + cshift*cont + mean
     out
 }
 
