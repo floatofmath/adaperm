@@ -2,7 +2,10 @@
 title: "Permutation tests for adaptive designs"
 subtitle: "Prototypes for experimental package features"
 author: Florian Klinglmueller
-output: rmarkdown::html_vignette
+output:
+    pdf_document:
+        keep_tex: true
+    rmarkdown::html_vignette: default
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteIndexEntry{Vignette Title}
@@ -31,11 +34,11 @@ options(mc.cores=detectCores()-1)
 
 Let $T_{(1)},...,T_{(|G|)}$ the ordered resampling test statistics of
 the pre-planned test. Then the $p$-value of the test following an
-adaptive interim analysis is given by $\tilde{p} = 1-\frac{r^*}{|\G|}$
+adaptive interim analysis is given by $\tilde{p} = 1-\frac{r^*}{|G|}$
 where
 
 $$
-r^*=\min \{ r : \pe \leq A(T_{(r)})\}
+r^*=\min \{ r : p_E \leq A(T_{(r)})\}
 $$
 
 
@@ -551,7 +554,7 @@ which can be easily computed even for a Monte Carlo sample from the permutation 
 And the conditional error function is:
 
 $$
-A'_\eplsilon = A' + P(T \in [T_\alpha-\epsilon,T_\alpha)|x_{|n_1})\frac{\alpha - P(T > T_\alpha)}{P(T \in [T_\alpha-\epsilon,T_\alpha))}
+A'_\epsilon = A' + P(T \in [T_\alpha-\epsilon,T_\alpha)|x_{|n_1})\frac{\alpha - P(T > T_\alpha)}{P(T \in [T_\alpha-\epsilon,T_\alpha))}
 $$  
 
 For $\epsilon \rightarrow \infty$ one gets:
@@ -909,7 +912,7 @@ for(n in 1:24){
 
 ## faster cpp permutations
 
-```{r}
+```{r,eval=F}
 library(Rcpp)
 sourceCpp("../src/random_reassignments_cpp.cpp")
 library(microbenchmark)
@@ -922,3 +925,4 @@ replicate(1000,{null <- all_combinations(20,10);NULL})
 
 
 ```
+
