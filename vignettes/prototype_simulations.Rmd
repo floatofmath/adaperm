@@ -8,7 +8,7 @@ vignette: >
   \usepackage[utf8]{inputenc}
 output:
     pdf_document:
-        keep_tex: true
+      keep_tex: true
     rmarkdown::html_vignette: default
 ---
 
@@ -60,69 +60,79 @@ for(n in 1:24){
 
 
 ```
-# Simulation setup
 
-## Tests under consideration
+To evaluate the operating characteristics of the approach we performed
+a simulation study, that compares the conditional error based
+permutation tests with previously suggested test procedures for
+adaptive designs for trials of different sample sizes and observations
+from different distributions.
 
-We look at three classes of tests:
+Specifically we compare the performance of conditional error based
+permutation tests using either the difference in group means or the
+sum of ranks in the treatment groups with inverse-normal combination
+tests based on stage-wise $t$-tests or Wilcoxon Rank-sum
+tests. As all scenarios use balanced sample sizes, the preplanned
+tests underlying the conditional error based approach using the
+difference of means is equivalent to a permutation test based on the
+$t$-Statistic; the Rank-sum is equivalent to a Wilcoxon Rank sum
+test. 
 
-1. **Inverse-normal combination tests**
-   - Equal variance $t$-test 
-   - Stage-wise Wilcoxon Rank-sum tests
-2. **Permutation based conditional error tests**
-   - Permutation test using $t$-statistic
-   - Permutation test using Wilcoxon Rank-sum statistic
-
-
-For the permutation test using the Wilcoxon Rank-sum statistic  we
-additionally consider conditional error functions:
-
-1. Based on the conservative preplanned permutation test
-2. Based on the exact randomized preplanned permutation test,
-   applying a conservative second stage test
-3. Based on the exact randomized preplanned permutation test,
-   applying a mid-$p$ value based second stage test
+For the conditional error based approach we also compare different
+versions of the conditional error rate and second stage test. We
+compare a procedure using the conidtional error of the conservative
+preplanned permutation test (see \ref{}), or the conditional error
+of the exact randomized permutation (see \ref{}). Finally we look at
+a procedure that in addition to using the conditional error of the
+randomized preplanned permutation test, also applies a second stage
+permutation test using the mid-$p$ value instead of the conservative
+permutation $p$-value.
 
 
 ## Distributions
 
-Naturally we need to consider the Normal distribution. Proschan
-considers the following distributions:
-  
-- log-gamma distribution
-- t-distribution
-  
-Gorman considers the following distributions:
-  
-- uniform
-- t-distribution df=4
-- lambda family 
-- symmetric bimodal
-- skewed bimodal
-
-
-We consider:
+In terms of data generating processes we consider the following
+reference distributions. We compare the performance of test procedures
+with observations sampled from the
 
 1. normal distirbution
 2. log-gamma distribution
 3. t-distribution with 4 degrees of freedom
-4. contaminated normal distribution with 10\% of observations sampled
-   from a normal with three-times higher standard deviation
+4. contaminated normal distribution, where 10\% of the observations
+   sampled from a normal distribution with three-times higher standard
+   deviation then the remaining observations.
 
-For all distributions we will study a scenario under the null, and two
-scenarios under the alternative - one where the *Inverse-normal
-combination $t$-test* has 60% power with a preplanned total per-group
-sample size of 10, the other where it achieves 60% power with a
-preplanned total per-group sample size of 100. 
+The normal distribution is considered the baseline scenario. We expect
+that in this situation the $t$-test based procedures outperform
+procedures based on Rank-sum statistics. The log-gamma distribution
+represents a left-skewed distribution, the t-distribution has heavy
+tails, so does the contaminated normal distribution. See Figure
+\ref{fig:distributions} for the densities of distributions under the
+null - and alternative-hypothesis.
 
-## Sample size reassessment
+For all distributions we will study scenarios under the null
+hypothesis, as well as scenarios under the alternative. Specifically
+we investigate a small, a medium and a large sample size scenario,
+with pre-planned per group sample sizes of 10, 30 and 100
+observations. For every combination of distribution and sample size we
+have calibrated the parameters such that the inverse-normal
+combination $t$-test gives a power of 60% under the alternative.
+
+\begin{figure}
+  \centering
+  \includegraphics{distributions.eps}
+  \caption{Densities of the distributions from which observations are
+    samples. Under the null-hypothesis samples are drawn from
+    distributions with densities shown by solid lines. Under the
+    alternative samples in the treatment group are drawn from
+    distributions with densities shown with dashed lines.}
+  \label{fig:distributions}
+\end{figure}
+
 
 In all cases we will apply a sample size reassessment rule based on
 a conditional power rule that reestimates the sample size based on an
-unblinded estimate of the variance. 
-
-
-# Calibration of scenarios
+unblinded estimate of the variance in order to achieve a target power
+of 80\% (see Section \ref{example}).
 
 ## Test procedure
 
@@ -580,9 +590,10 @@ save(sims,file=vfile('~/adaperm_simresults/null_simulations_medium'))
 
 
 ```
+
 For each scenario we simulated 50000 trials. For each trial we
-computed the test decision of each test procedure where computed. Permutation
-test used a maximum of 10^5 permutations for the computation of the
+computed the test decision of each test procedure. Permutation
+tests used a maximum of 10^5 permutations for the computation of the 
 permutation distribution.
 
 Simulations for the small sample scenarios took about a day using 30
@@ -603,9 +614,14 @@ load('../data/null_simulations_large_node6_160412.Rd')
 large_null_50k <- sims
 load('../data/alt_simulations_large_node6_160419.Rd')
 large_alt_50k <- sims
+load('../data/simulations_medium_node6_160429.Rd')
+medium_null_50k <- sims[1:4,]
+medium_alt_50k <- sims[5:8,]
 
 sims <- bind_rows(small_null_50k,
                   small_alt_50k,
+                  medium_null_50k,
+                  medium_alt_50k,
                   large_null_50k,
                   large_alt_50k)
 
@@ -622,6 +638,12 @@ sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==5) %>% dcast(distribution~Test,value.var='Power') -> small_alt_tab
 
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0==0 & n1==15) %>% dcast(distribution~Test,value.var='Power') -> medium_null_tab
+
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
+    subset(delta0>0 & n1==15) %>% dcast(distribution~Test,value.var='Power') -> medium_alt_tab
+
+sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0==0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_null_tab
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_alt_tab
@@ -636,12 +658,18 @@ pander(small_null_tab,split.table=3000,digits=3,caption='Simulations of small sa
 
 ```
 ```{r,results='markup'}
+pander(medium_null_tab,split.table=3000,digits=3,caption='Simulations of medium sample scenarios under the null hypothesis')
+```
+
+
+```{r,results='markup'}
 pander(large_null_tab,split.table=3000,digits=3,caption='Simulations of large sample scenarios under the null hypothesis')
 ```
+
 We see that the Type I error rate is essentially controlled for all
 scenarios. Small deviations from the nominal level are due to
 simulation error. Even the test using the mid-$p$-value in the
-second-stage test seem to control the Type I error rate.
+second-stage seems to control the Type I error rate.
 
 
 ## Power
@@ -652,7 +680,7 @@ pander(small_alt_tab,split.table=3000,digits=3,caption='Simulations of small sam
 
 Looking at the power there are large differences between the small and
 large sample scenarios. In the small sample scenarios the inverse
-normal combination Wilcoxon test performs really bad, this is due to
+normal combination Wilcoxon test performs poorly, this is due to
 the extreme discreteness of the conditional null distribution when the
 test is applied stage-wise with only 5 observations per
 group. Consequently applying an inverse normal combination t-test
@@ -670,6 +698,9 @@ combination t-test we gain between 1 percentage point (normally
 distributed observations) and 3 percentage points
 (log-gamma, contaminated normal) in power.
 
+```{r,results='markup'}
+pander(medium_alt_tab,split.table=3000,digits=3,caption='Simulations of medium sample scenarios under the alternative hypothesis')
+```
 
 
 ```{r,results='markup'}
