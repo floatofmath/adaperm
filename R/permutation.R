@@ -159,10 +159,16 @@ omega <- function(g1,g2=NULL,g3=NULL,restricted = TRUE,B=1000,add_obs=TRUE){
 ##' @param B Number of permutations 
 ##' @param x3 Third stage data (e.g. sample size increase)
 ##' @param g3 (Dummy) third stage treatment assignments (see Details)
+##' @param restricted Should sample sizes be restricted by stage 
+##' @param stratified Should permutation be stratified by stage
 ##' @return numeric vector 
 ##' @author Florian Klinglmueller
-cond_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
-    omega <- omega(g2,g3,restricted=restricted,B=B,add_obs=FALSE)
+cond_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE,stratified=TRUE){
+    if(stratified){
+        omega <- omega(g2,g3,restricted=restricted,B=B,add_obs=FALSE)
+    } else {
+        omega <- omega(c(g2,g3),restricted=restricted,B=B,add_obs=FALSE)
+    }
     omega <- rbind(matrix(g1,nrow=length(g1),ncol=ncol(omega)),omega)
     stat(c(x1,x2,x3),omega)
 }
@@ -183,11 +189,16 @@ cond_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
 ##' @param x3 (Dummy) third stage data (e.g. sample size increase)
 ##' @param g3 (Dummy) third stage treatment assignments (see Details)
 ##' @param restricted Should group sizes be considered fixed
+##' @param stratified Should permutation be stratified by stage
 ##' @return numeric vector
 ##' @author Florian Klinglmueller
 ##' @export
-perm_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE){
-    omega <- omega(g1,g2,g3,restricted=restricted,B=B)
+perm_dist <- function(x1,x2,g1,g2,stat,B,x3=NULL,g3=NULL,restricted=TRUE,stratified=TRUE){
+    if(stratified){
+        omega <- omega(g1,g2,g3,restricted=restricted,B=B)
+    } else {
+        omega <- omega(c(g1,g2,g3),restricted=restricted,B=B)
+    }
     stat(c(x1,x2,x3),omega)
 }
 
@@ -238,15 +249,17 @@ p2t <- function(p,dist){
 ##' @param g3 Third stage group assignments
 ##' @param restricted Should group sizes be considered fixed
 ##' @param type Type of p-value to compute (see details)
+##' @param stratified should permutation be stratified by stage
 ##' @return p-value of the permutation test
 ##' @author Florian Klinglmueller
 ##'
 ##' @export
 perm_test <- function (x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
                        restricted,
-                       type=c('non-randomized','randomized','midp','davison_hinkley')) 
+                       type=c('non-randomized','randomized','midp','davison_hinkley'),
+                       stratified=TRUE) 
 {
-    dist <- perm_dist(x1, x2, g1, g2, stat, B, x3, g3, restricted = restricted)
+    dist <- perm_dist(x1, x2, g1, g2, stat, B, x3, g3, restricted = restricted,stratified=stratified)
     t <- stat(c(x1, x2, x3), c(g1, g2, g3))
     t2p(t,dist,type[1])
 }

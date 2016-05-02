@@ -26,6 +26,7 @@ library(pander)
 library(parallel)
 library(bt88.03.704)
 ##devtools::install_github('floatofmath/adaperm')
+##devtools::install('~/repos/adaperm')
 library(adaperm)
 options(mc.cores=detectCores()-1)
 
@@ -150,6 +151,7 @@ y <- rnorm(20)
 adaptive_invnormtest_2s(x,y,n1=8,n=16,ne=20)
 adaptive_invnorm_wilcoxtest_2s(x,y,n1=8,n=16,ne=20)
 adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=tstat)
+adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=tstat,stratified=FALSE)
 adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum)
 adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum,cer_type='randomized')
 adaperm_DR(c(x,y),rep(0:1,each=20),n1=8,n=16,test=ranksum,cer_type='randomized',atest_type='midp')
@@ -542,7 +544,10 @@ run_scenario <- function(scenario){
                  adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=10^5),
                  adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
                  adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
-                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5))
+                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
+                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
+                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
+                 )
                                         #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
 }
@@ -561,7 +566,10 @@ simulate_scenario <- function(scenario,B){
                   adaperm_t=mean(adaperm_t),
                   adaperm_w=mean(adaperm_w),
                   adaperm_rw=mean(adaperm_rw),
-                  adaperm_rwp=mean(adaperm_rwp))
+                  adaperm_rwp=mean(adaperm_rwp),
+                  adaperm_ut=mean(adaperm_ut),
+                  adaperm_uw=mean(adaperm_uw)
+                  )
 #                  adaperm_m=mean(adaperm_m))
 }
 ```
@@ -582,7 +590,7 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4),rep(15,4)),2),
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[10,])
 out <- list() 
-for(i in c(9:12,21:24)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=2000))
+for(i in c(1:4,13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=100))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 

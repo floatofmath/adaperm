@@ -137,6 +137,7 @@ permutation_CER <- function(x1,g1,x2,stat=sumdiff,
 ##' @param alpha pre-fixed significance level
 ##' @param restricted should stagewise treatment group sizes be considered fixed
 ##' @param cer_type type of preplanned test for which the CER is computed (see details)
+##' @param stratified should permutation be performed stratified by stage
 ##' @return numeric value of the conditional error rate
 ##' @author Florian Klinglmueller
 ##' @export
@@ -146,13 +147,14 @@ permutation_cer <- function(x1,x2,
                             permutations,
                             alpha,
                             restricted,
-                            cer_type=c("non-randomized","randomized","uniform")){
+                            cer_type=c("non-randomized","randomized","uniform"),
+                            stratified=FALSE){
     n1 <- length(x1)
     n <- length(c(x1,x2))
     n2 <- n-n1
     g2 <- rep(0:1,each=nt2)
-    pdist <- perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
-    cdist <- cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted)
+    pdist <- perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted,stratified=stratified)
+    cdist <- cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted,stratified=stratified)
     M <- length(dist)
     talpha <- p2t(alpha,pdist)
     A  <- mean(cdist > talpha)

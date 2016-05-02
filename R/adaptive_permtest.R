@@ -11,6 +11,7 @@
 ##' @param alpha significance level
 ##' @param permutations number of permutations to use
 ##' @param restricted should the treatment group sizes be fixed
+##' @param stratified should permutation be stratified by stage
 ##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
 ##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for details
 ##' @return pvalue
@@ -21,11 +22,12 @@ adaptive_permdr <- function(x1,x2,xE,
                         test_statistic,
                         alpha,
                         permutations,
-                        restricted,
+                            restricted,
+                            stratified,
                         atest_type=c("non-randomized","mid-p","davison_hinkley","CER"),
                             cer_type=c("non-randomized","randomized","uniform")){
     if(length(xE)==0 && !atest_type=='CER'){
-        return(alpha>=perm_test(x1,x2,g1,g2,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
+        return(alpha>=perm_test(x1,x2,g1,g2,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type,stratified=stratified))
     }
     A <- permutation_cer(x1,x2,
                          g1,sum(g2>0),
@@ -33,15 +35,16 @@ adaptive_permdr <- function(x1,x2,xE,
                          alpha=alpha,
                          permutations=permutations,
                          restricted=restricted,
-                         cer_type=cer_type)
+                         cer_type=cer_type,
+                         stratified=stratified)
     if(atest_type == 'CER'){
         return(A)
     } else {
-        return(A > perm_test(x2,xE,g2,gE,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type))
+        return(A > perm_test(x2,xE,g2,gE,stat=test_statistic,B=permutations,restricted=restricted,type=atest_type,stratified=stratified))
     }
 }
 .cer_types = c("non-randomized","randomized","uniform")
-.atest_types = c("non-randomized","mid-p","davison_hinkley","CER")
+.atest_types = c("non-randomized","midp","davison_hinkley","CER")
 
 
 ##' User friendly wrapper to \code{\link{adaptive_permdr}}
@@ -58,10 +61,13 @@ adaptive_permdr <- function(x1,x2,xE,
 ##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detailcer_type 
 ##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
 ##' @param permutations Number of permutations to use
+##' @param stratified should permutation be stratified by stage
 ##' @return Decision \code{TRUE} if null hypothesis is rejected
 ##' @author Florian Klinglmueller
 ##' @export
-adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type=.cer_types,atest_type=.atest_types,permutations=10000){
+adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type='non-randomized',atest_type='non-randomized',permutations=10000,stratified=TRUE){
+    cer_type=match.arg(cer_type,.cer_types)
+    atest_type=match.arg(atest_type,.atest_types)
     if(is.null(g)){
         ## one-sample test
         restricted <- FALSE
@@ -77,13 +83,14 @@ adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_typ
     xs <- obs[[1]]
     gs <- obs[[2]]
     adaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
-                      gs[[1]],gs[[2]],gs[[3]],
-                      test_statistic=test_statistic,
-                      alpha=alpha,
-                      permutations=permutations,
-                      restricted=restricted,
-                      atest_type=atest_type,
-                      cer_type=cer_type)
+                    gs[[1]],gs[[2]],gs[[3]],
+                    test_statistic=test_statistic,
+                    alpha=alpha,
+                    permutations=permutations,
+                    restricted=restricted,
+                    atest_type=atest_type,
+                    cer_type=cer_type,
+                    stratified=stratified)
 }
 
 
