@@ -541,12 +541,12 @@ run_scenario <- function(scenario){
 #                 fixed_w=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),ranksum,10^5,restricted=T)<=0.025,
                  invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
                  invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-                 adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type=cete,atest_type=ttpe,permutations=10^5),
+                 adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type=ttpe,permutations=10^5),
                  adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
-                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
-                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
-                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
+#                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
+#                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
+#                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
+#                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
                  )
                                         #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
          })
@@ -564,11 +564,11 @@ simulate_scenario <- function(scenario,B){
                   invnorm_t=mean(invnorm_t),
                   invnorm_w=mean(invnorm_w),
                   adaperm_t=mean(adaperm_t),
-                  adaperm_w=mean(adaperm_w),
-                  adaperm_rw=mean(adaperm_rw),
-                  adaperm_rwp=mean(adaperm_rwp),
-                  adaperm_ut=mean(adaperm_ut),
-                  adaperm_uw=mean(adaperm_uw)
+#                  adaperm_w=mean(adaperm_w),
+                  adaperm_rw=mean(adaperm_rw)
+#                  adaperm_rwp=mean(adaperm_rwp),
+#                  adaperm_ut=mean(adaperm_ut),
+#                  adaperm_uw=mean(adaperm_uw)
                   )
 #                  adaperm_m=mean(adaperm_m))
 }
@@ -590,11 +590,11 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4),rep(15,4)),2),
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[10,])
 out <- list() 
-for(i in c(1:4,13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=100))
+for(i in c(1:4,9:16,21:24)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=10000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 
-save(sims,file=vfile('~/adaperm_simresults/null_simulations_medium'))
+save(sims,file=vfile('~/adaperm_simresults/simulations_unstratified'))
 
 
 ```
