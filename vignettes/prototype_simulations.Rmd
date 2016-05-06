@@ -88,6 +88,13 @@ randomized preplanned permutation test, also applies a second stage
 permutation test using the mid-$p$ value instead of the conservative
 permutation $p$-value.
 
+The conditional error based approaches are all based on stage-wise
+stratified permutations (\ie the per group sample sizes are fixed and
+balanced within each stage). Using permutations that do not stratify
+the permutations by stage does not improve the performance of the
+procedure (data not shown). This is not surprising, as we simulate
+data under a block-randomized design that blocks by stages. 
+
 
 ## Distributions
 
@@ -590,11 +597,11 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4),rep(15,4)),2),
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[10,])
 out <- list() 
-for(i in c(1:4,13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=100))
+for(i in c(1:4,13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 
-save(sims,file=vfile('~/adaperm_simresults/null_simulations_medium'))
+save(sims,file=vfile('~/adaperm_simresults/simulations_small_ustrat'))
 
 
 ```
@@ -625,6 +632,11 @@ large_alt_50k <- sims
 load('../data/simulations_medium_node6_160429.Rd')
 medium_null_50k <- sims[1:4,]
 medium_alt_50k <- sims[5:8,]
+## load('../data/simulations_unstratified_node6_160503.Rd')
+## small_null_50k <- sims[1:4,]
+## small_alt_50k <- sims[9:12,]
+## medium_null_50k <- sims[5:8,]
+## medium_alt_50k <- sims[13:16,]
 
 sims <- bind_rows(small_null_50k,
                   small_alt_50k,
@@ -632,6 +644,7 @@ sims <- bind_rows(small_null_50k,
                   medium_alt_50k,
                   large_null_50k,
                   large_alt_50k)
+colnames(sims)[12:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W','CER$^r$:W$_\\textrm{mid-p}$')#,'CER:Tu','CER:Wu')
 
 ## pdf('simresults.pdf',height=4,width=7)
 ## sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
@@ -651,15 +664,40 @@ sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==15) %>% dcast(distribution~Test,value.var='Power') -> medium_alt_tab
 
+
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0==0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_null_tab
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_alt_tab
 
 
+
+##devtools::install_github('qrat/plaint')
+colnames(sims)
+library(plaint)
+
+simtab <- sims[,-c(1,4,6:8,10:11)]
+simtab <- simtab[with(simtab,order(distribution,n,delta0)),]
+rownames(simtab) <- paste(simtab$distribution,1:nrow(simtab))
+simtab %<>% mutate(distribution=c("cont" = "Cont.","log-gamma" = "log-$\\gamma$","normal" = "Normal","t4" = "t$_4$"," " = " ")[distribution])
+simtab %<>%
+    group_by(delta0,n) %>% do(within(.,{ #distribution[duplicated(distribution)] <- ' '
+                                       n[duplicated(n)] <- ' '}
+                                     ))
+simtab %<>% within(delta0[duplicated(delta0)] <- ' ')
+ftab <- form(simtab[,c(3,1,2,4:5,7,6,8:ncol(simtab))],formatcolumn = list(
+                                                "%1i" = "delta0",
+                                                "%3i" = "n",
+                                                "%3.1f" = "ASN"))
+#             marker=list("v=='1'" = "delta0"),
+                                        #             symbol=list("**" = "=="))
+ftab[13,1] <- "\\\\\\hline\\\\"
+latex(ftab,options=list(rownames=FALSE),design='design.txt')
+
 ```
 
 ## Type 1 error
+
 
 ```{r,results='markup'}
 pander(small_null_tab,split.table=3000,digits=3,caption='Simulations of small sample scenarios under the null hypothesis')
