@@ -5,7 +5,7 @@
 \title{Permutation distribution}
 \usage{
 perm_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
-  restricted = TRUE)
+  restricted = TRUE, stratified = TRUE)
 }
 \arguments{
 \item{x1}{First stage data}
@@ -25,6 +25,8 @@ perm_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
 \item{g3}{(Dummy) third stage treatment assignments (see Details)}
 
 \item{restricted}{Should group sizes be considered fixed}
+
+\item{stratified}{Should permutation be stratified by stage}
 }
 \value{
 numeric vector

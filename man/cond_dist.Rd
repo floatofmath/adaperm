@@ -5,7 +5,7 @@
 \title{Conditional permutations distribution}
 \usage{
 cond_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
-  restricted = TRUE)
+  restricted = TRUE, stratified = TRUE)
 }
 \arguments{
 \item{x1}{First stage data}
@@ -23,6 +23,10 @@ cond_dist(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL,
 \item{x3}{Third stage data (e.g. sample size increase)}
 
 \item{g3}{(Dummy) third stage treatment assignments (see Details)}
+
+\item{restricted}{Should sample sizes be restricted by stage}
+
+\item{stratified}{Should permutation be stratified by stage}
 }
 \value{
 numeric vector

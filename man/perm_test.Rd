@@ -5,7 +5,8 @@
 \title{perform permutation test}
 \usage{
 perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted,
-  type = c("non-randomized", "randomized", "midp", "davison_hinkley"))
+  type = c("non-randomized", "randomized", "midp", "davison_hinkley"),
+  stratified = TRUE)
 }
 \arguments{
 \item{x1}{First stage observations}
@@ -27,6 +28,8 @@ perm_test(x1, x2, g1, g2, stat, B, x3 = NULL, g3 = NULL, restricted,
 \item{restricted}{Should group sizes be considered fixed}
 
 \item{type}{Type of p-value to compute (see details)}
+
+\item{stratified}{should permutation be stratified by stage}
 }
 \value{
 p-value of the permutation test

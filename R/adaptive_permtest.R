@@ -50,18 +50,7 @@ adaptive_permdr <- function(x1,x2,xE,
 ##' User friendly wrapper to \code{\link{adaptive_permdr}}
 ##'
 ##' @title Permutation based decision rule for adaptive designs
-##' @param x Observations
-##' @param g Treatment assignments (if \code{NULL}) a one-sample test will be performed
-##' @param n1 First stage control-group sample size
-##' @param n Pre-planned overall sample size
-##' @param m1 First stage treatment-group sample size (will be ignored if \code{g} is \code{NULL})
-##' @param m Pre-planned overall treatment-group sample size (will be ignored if \code{g} is \code{NULL})
-##' @param test_statistic Test statistic
-##' @param alpha Significance level
-##' @param cer_type what type of conditional error rate function should be used (see \code{\link{permutation_cer}}) for detailcer_type 
-##' @param atest_type if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details) 
-##' @param permutations Number of permutations to use
-##' @param stratified should permutation be stratified by stage
+##' @template adaperm_opts
 ##' @return Decision \code{TRUE} if null hypothesis is rejected
 ##' @author Florian Klinglmueller
 ##' @export
@@ -91,6 +80,84 @@ adaperm_DR <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_typ
                     atest_type=atest_type,
                     cer_type=cer_type,
                     stratified=stratified)
+}
+
+
+##' Main user interface for adaperm
+##'
+##' @title Permutation based test for adaptive designs
+##' @template adaperm_opts
+##' @return An object of class \code{htest}
+##' @author Florian Klinglmueller
+##' @export
+adaperm  <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type='non-randomized',atest_type='non-randomized',permutations=10000,stratified=TRUE){
+    cer_type=match.arg(cer_type,.cer_types)
+    atest_type=match.arg(atest_type,.atest_types)
+    ## Rearrange data depending on the type of test
+    if(is.null(g)){
+        ## one-sample test
+        restricted <- FALSE
+        obs <- split_sample_os(x,n1,n)
+        string_nv <- c("distribution of samples"='not located at zero')
+        string_method <- "One-sample sign-flip test for adaptive designs"
+    } else {
+        restricted  <- TRUE
+        if(length(g) == m1+n1 && atest_type=='CER'){
+            ## if we only want to know the CER
+            g <- c(g,rep(0,n-n1),rep(1,m-m1))
+        }        
+        obs <- split_sample_ts(x[g<=0],x[g>0],n1,n,m1,m)
+        string_nv <- c("distribution of treated samples"='different from control samples')
+        string_method <- "Two-sample permutation test for adaptive designs"
+    }
+    xs <- obs[[1]]
+    gs <- obs[[2]]
+    ## For testing reasons compute also the decision
+    oldec <- adaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
+                    gs[[1]],gs[[2]],gs[[3]],
+                    test_statistic=test_statistic,
+                    alpha=alpha,
+                    permutations=permutations,
+                    restricted=restricted,
+                    atest_type=atest_type,
+                    cer_type=cer_type,
+                    stratified=stratified)
+    pval <- adaptive_permtest_quick(xs[[1]],xs[[2]],xs[[3]],
+                                    gs[[1]],gs[[2]],gs[[3]],
+                                    stat=test_statistic,
+                                    permutations=permutations,
+                                    restricted=restricted,
+                                    stratified=stratified)
+    err <- function(d,conf_level=.5){
+        xs[[1]] <- xs[[1]]-d*gs[[1]]
+        xs[[2]] <- xs[[2]]-d*gs[[2]]
+        xs[[3]] <- xs[[3]]-d*gs[[3]]
+        adaptive_permtest_quick(xs[[1]],xs[[2]],xs[[3]],
+                                gs[[1]],gs[[2]],gs[[3]],
+                                stat=test_statistic,
+                                permutations=5000,
+                                restricted=restricted,
+                                stratified=stratified)-conf_level
+    }
+
+    t2 <- test_statistic(c(xs[[2]],xs[[3]]),c(xs[[2]],xs[[3]]))
+    names(t2) <- deparse(substitute(stat))
+    ## rms
+    guesstimate <- sqrt(mean(c(xs[[1]],xs[[2]],xs[[3]])^2))*sign(.5-pval)
+    estimate <- c("constant additive effect"=uniroot(err,c(0,guesstimate))$root)
+    conf.int <- c(uniroot(err,c(0,guesstimate*sign(alpha-pval)),conf_level=alpha)$root,Inf)
+    attr(conf.int,"conf.level") <- 1-alpha
+    out <- list(statistic = t2,
+                parameter = c('permutations'=permutations),
+                p.value = pval,
+                estimate = estimate,
+                conf.int=conf.int,
+                alternative = "one.sided",
+                null.value = string_nv,
+                data.name = paste(deparse(substitute(c(x1,x2,xE,g1,g2,gE))),collapse=', '),
+                method = string_method)
+    class(out) <- 'htest'
+    out
 }
 
 
@@ -138,13 +205,13 @@ adaptive_permtest_ts <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,conf_
 ##' @param restricted should the treatment group sizes be fixed
 ##' @return pvalue
 ##' @author Florian Klinglmueller
-adaptive_permtest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted=T){
+adaptive_permtest_quick <- function(x1,x2,xE,g1,g2,gE,stat,permutations=10000,restricted=T,stratified=T){
     ## permutation distribution of preplanned test
-    pdist  <- perm_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    pdist  <- perm_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted,stratified=stratified)
     ## conditional distribution of preplanned test given the first stage data
-    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted)
+    cdist <- adaperm:::cond_dist(x1,x2,g1,g2,stat,B=permutations,restricted=restricted,stratified=stratified)
     ## permutation distribution of adapted test
-    edist <- perm_dist(x2,xE,g2,gE,stat,B=permutations,restricted=restricted)
+    edist <- perm_dist(x2,xE,g2,gE,stat,B=permutations,restricted=restricted,stratified=stratified)
     ## observed test statistic of adapted test
     t2 <- stat(c(x2,xE),c(g2,gE))
     ## adaptive p-value 

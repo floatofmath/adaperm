@@ -65,18 +65,18 @@ sim_pvals <- function(B,delta,nulldist=rnorm,...){
     }
 
 
-pval_dist <- sim_pvals(1000,1,rnorm_cont,csd=10)
-head(t(pval_dist))
-cor(t(pval_dist)[,c(1,3)])
-plot(t(pval_dist)[,c(1,3)])
-par(mfrow=c(3,1))
-plot(sort(pval_dist[1,]),seq(0,1,length.out=1000))
-plot(sort(pval_dist[2,]),seq(0,1,length.out=1000))
-plot(sort(pval_dist[3,]),seq(0,1,length.out=1000))
+## pval_dist <- sim_pvals(1000,1,rnorm_cont,csd=10)
+## head(t(pval_dist))
+## cor(t(pval_dist)[,c(1,3)])
+## plot(t(pval_dist)[,c(1,3)])
+## par(mfrow=c(3,1))
+## plot(sort(pval_dist[1,]),seq(0,1,length.out=1000))
+## plot(sort(pval_dist[2,]),seq(0,1,length.out=1000))
+## plot(sort(pval_dist[3,]),seq(0,1,length.out=1000))
 
 ## lookin good!
-rowSums(pval_dist<.05)/1000
-hist(pval_dist[1,])
+## rowSums(pval_dist<.05)/1000
+## hist(pval_dist[1,])
 
 
 
@@ -173,10 +173,9 @@ tests <- list(
     permtestM = function(x,n1,n,ne) adaptive_permtest_os(x,n1,n,ne,maritzm,perms=10000))
 
 ## Type I error 
-compare_tests_onesample(1000,tests,10,20,cond_power_rule_norm,rnorm_cont,mean=0,sd=1.2,cshift=0,csd=3)
-## Power
-compare_tests_onesample(1000,tests,10,20,cond_power_rule_norm,rnorm_cont,mean=.5,sd=1,cshift=.5,csd=5)
-
+## compare_tests_onesample(1000,tests,10,20,cond_power_rule_norm,rnorm_cont,mean=0,sd=1.2,cshift=0,csd=3)
+## ## Power
+## compare_tests_onesample(1000,tests,10,20,cond_power_rule_norm,rnorm_cont,mean=.5,sd=1,cshift=.5,csd=5)
 
 
 delta <- 0
@@ -346,6 +345,93 @@ adaptive_permtest_ts(x1,x2,xE,g1,g2,gE,meandiff,perm=10000)
 
 ```
 
+## Case study
+
+### Synthetic data
+
+```{r}
+robust_pooled_variance <- function(x,y){
+    (iqr(c(x-median(x),y-median(y)))/1.349)^2
+}
+
+cond_power_rule_norm_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=length(x)*6,rob_var=T){
+    n1 <- length(x)
+    var <- ifelse(rob_var,
+                  robust_pooled_variance(x,y),
+                  pooled_variance(c(x,y),c(rep(0,length(x)),rep(1,length(y)))))
+    nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
+    ceiling(min(maxN,nE))
+}
+
+
+set.seed(261081)
+boxplot(cbind(x <- rnorm_cont(16,25,8,cshift=0,csd=24),y <- rnorm_cont(16,19,8,cshift=0,csd=24)),ylim=c(0,56))
+cond_power_rule_norm_ts(x[1:8],y[1:8],delta=8,target=.8,rob_var=F)
+xE <- rnorm_cont(6,25,8,cshift=0,csd=24)
+yE <- rnorm_cont(6,19,8,cshift=0,csd=24)
+
+adaperm(c(x,xE,y,yE),g=rep(0:1,each=22),8,16,test_statistic=ranksum,cer_type='randomized',atest_type='non-randomized')
+adaptive_invnormtest_2s(c(y,yE),c(x,xE),8,16,22)
+
+```
+
+### Real data
+```{r}
+library(coin)
+library(gMCP)
+library(ggplot2)
+library(nparcomp)
+data(rotarod)
+## not useful
+ggplot(rotarod,aes(group,time))+geom_boxplot()
+data(neuropathy)
+## heteroskedastic
+ggplot(neuropathy,aes(group,pain))+geom_boxplot()
+
+library(multcomp)
+data(recovery)
+head(recovery)
+ggplot(recovery,aes(blanket,minutes))+geom_boxplot()
+recovery %>% group_by(blanket) %>% group_size
+                                        #maybe(b0 vs b3)
+data(mtept)
+head(mtept)
+ggplot(mtept,aes(treatment,E4))+geom_boxplot()
+mtept %>% group_by(blanket) %>% group_size
+
+library(MASS)
+data(anorexia)
+head(anorexia)
+ggplot(anorexia,aes(Treat,Prewt-Postwt))+geom_boxplot()
+anorexia %>% group_by(Treat) %>% group_size
+
+
+
+power.t.test(delta=.25,sd=.25,power=.8,sig.level=.025,alternative="one.sided")
+
+s  <- sample(10000:99999,1)
+set.seed(s)
+stage <- sample(rep(1:3,c(9,9,12)))
+neuropathy$stage <- c(stage[-which(stage==3)[(1:2)]],stage)
+x1 <- neuropathy[neuropathy$stage==1,'pain']
+g1 <- rep(0:1,each=9)
+x2 <- neuropathy[neuropathy$stage==2,'pain']
+g2 <- rep(0:1,each=9)
+xE <- neuropathy[neuropathy$stage==3,][-(19:20),'pain']
+gE <- rep(0:1,each=10)
+cond_power_rule_t_ts(x1[g1==0],x1[g1==1],delta=1/4,target=.8)
+
+73541::22
+92203::27
+38478::24
+
+neuropathy %>% group_by(group) %>% group_size()
+
+neuropathy %>% group_by(group) %>% mutate(stage = sample
+
+```
+
+
 # Group sequential procedures
 
 ```{r}
@@ -446,7 +532,12 @@ gsd2_permtest_ts(x1+g1,x2+g2,xE+gE,g1,g2,gE,alpha,meandiff,10^5)
 
 ```
 
-# some subsetting
+
+
+
+# Efficiency considerations
+
+## different ways to subset some subsetting
 
 ```{r,eval=F}
 

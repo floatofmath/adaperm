@@ -5,7 +5,7 @@
 \title{Quick adaptive permutation test}
 \usage{
 adaptive_permtest_quick(x1, x2, xE, g1, g2, gE, stat, permutations = 10000,
-  restricted = T)
+  restricted = T, stratified = T)
 }
 \arguments{
 \item{x1}{first stage observations}

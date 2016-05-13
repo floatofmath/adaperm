@@ -5,8 +5,9 @@
 \title{Quick adaptive permutation test}
 \usage{
 adaptive_permdr(x1, x2, xE, g1, g2, gE, test_statistic, alpha, permutations,
-  restricted, atest_type = c("non-randomized", "mid-p", "davison_hinkley",
-  "CER"), cer_type = c("non-randomized", "randomized", "uniform"))
+  restricted, stratified, atest_type = c("non-randomized", "mid-p",
+  "davison_hinkley", "CER"), cer_type = c("non-randomized", "randomized",
+  "uniform"))
 }
 \arguments{
 \item{x1}{first stage observations}
@@ -28,6 +29,8 @@ adaptive_permdr(x1, x2, xE, g1, g2, gE, test_statistic, alpha, permutations,
 \item{permutations}{number of permutations to use}
 
 \item{restricted}{should the treatment group sizes be fixed}
+
+\item{stratified}{should permutation be stratified by stage}
 
 \item{atest_type}{if 'CER' compute only conditional error rate, else type of adaptive test should be performed (see \code{\link{perm_test}} for details)}
 

@@ -6,7 +6,7 @@
 \usage{
 permutation_cer(x1, x2, g1, nt2 = floor(length(x2)/2), test_statistic,
   permutations, alpha, restricted, cer_type = c("non-randomized",
-  "randomized", "uniform"))
+  "randomized", "uniform"), stratified = FALSE)
 }
 \arguments{
 \item{x1}{vector of preplanned first stage observations}
@@ -26,6 +26,8 @@ permutation_cer(x1, x2, g1, nt2 = floor(length(x2)/2), test_statistic,
 \item{restricted}{should stagewise treatment group sizes be considered fixed}
 
 \item{cer_type}{type of preplanned test for which the CER is computed (see details)}
+
+\item{stratified}{should permutation be performed stratified by stage}
 }
 \value{
 numeric value of the conditional error rate
