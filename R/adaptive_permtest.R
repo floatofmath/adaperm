@@ -113,15 +113,15 @@ adaperm  <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type=
     xs <- obs[[1]]
     gs <- obs[[2]]
     ## For testing reasons compute also the decision
-    oldec <- adaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
-                    gs[[1]],gs[[2]],gs[[3]],
-                    test_statistic=test_statistic,
-                    alpha=alpha,
-                    permutations=permutations,
-                    restricted=restricted,
-                    atest_type=atest_type,
-                    cer_type=cer_type,
-                    stratified=stratified)
+    ## oldec <- adaptive_permdr(xs[[1]],xs[[2]],xs[[3]],
+    ##                 gs[[1]],gs[[2]],gs[[3]],
+    ##                 test_statistic=test_statistic,
+    ##                 alpha=alpha,
+    ##                 permutations=permutations,
+    ##                 restricted=restricted,
+    ##                 atest_type=atest_type,
+    ##                 cer_type=cer_type,
+    ##                 stratified=stratified)
     pval <- adaptive_permtest_quick(xs[[1]],xs[[2]],xs[[3]],
                                     gs[[1]],gs[[2]],gs[[3]],
                                     stat=test_statistic,
@@ -140,7 +140,7 @@ adaperm  <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha=.025,cer_type=
                                 stratified=stratified)-conf_level
     }
 
-    t2 <- test_statistic(c(xs[[2]],xs[[3]]),c(xs[[2]],xs[[3]]))
+    t2 <- test_statistic(c(xs[[2]],xs[[3]]),c(gs[[2]],gs[[3]]))
     names(t2) <- deparse(substitute(stat))
     ## rms
     guesstimate <- sqrt(mean(c(xs[[1]],xs[[2]],xs[[3]])^2))*sign(.5-pval)

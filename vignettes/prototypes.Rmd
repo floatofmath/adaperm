@@ -363,15 +363,71 @@ cond_power_rule_norm_ts <- function(x,y,delta=1,target=.9,alpha=0.025,maxN=lengt
     ceiling(min(maxN,nE))
 }
 
+out <- replicate(1000,{
+    x <- rnorm_cont(16,25,8,cshift=0,csd=24)
+    y <- rnorm_cont(16,19,8,cshift=0,csd=24)
+    print(rnE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T))
+    print(nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=F))
+    c(rnE=rnE,nE=nE,rpv=robust_pooled_variance(x[1:8],y[1:8]),pv=pooled_variance(c(x[1:8],y[1:8]),rep(0:1,each=8)))})
 
-set.seed(261081)
-boxplot(cbind(x <- rnorm_cont(16,25,8,cshift=0,csd=24),y <- rnorm_cont(16,19,8,cshift=0,csd=24)),ylim=c(0,56))
-cond_power_rule_norm_ts(x[1:8],y[1:8],delta=8,target=.8,rob_var=F)
-xE <- rnorm_cont(6,25,8,cshift=0,csd=24)
-yE <- rnorm_cont(6,19,8,cshift=0,csd=24)
+power.z.test <- function(delta,sigma,target,alpha=.025) 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*(sigma/delta)^2
 
-adaperm(c(x,xE,y,yE),g=rep(0:1,each=22),8,16,test_statistic=ranksum,cer_type='randomized',atest_type='non-randomized')
-adaptive_invnormtest_2s(c(y,yE),c(x,xE),8,16,22)
+n0 <- ceiling(power.z.test(6,6,.8))
+
+set.seed(5449219)
+x <- rnorm_cont(16,25,8,cshift=0,csd=24)
+y <- rnorm_cont(16,19,8,cshift=0,csd=24)
+boxplot(cbind(x,y),ylim=c(0,56))
+print(nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T))
+cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=F)
+xE <- rnorm_cont(nE-16,25,8,cshift=0,csd=24)
+yE <- rnorm_cont(nE-16,19,8,cshift=0,csd=24)
+adaperm(c(y,yE,x,xE),g=rep(0:1,each=nE),8,16,test_statistic=ranksum,cer_type='randomized',atest_type='non-randomized')
+adaperm(c(y,yE,x,xE),g=rep(0:1,each=nE),8,16,test_statistic=tstat,cer_type='randomized',atest_type='non-randomized')
+adaperm(c(y,yE,x,xE),g=rep(0:1,each=nE),8,16,test_statistic=meandiff,cer_type='randomized',atest_type='non-randomized')
+adaperm(c(y,yE,x,xE),g=rep(0:1,each=nE),8,16,test_statistic=maritzm,cer_type='randomized',atest_type='non-randomized')
+adaptive_invnormtest_2s(c(y,yE),c(x,xE),8,16,nE)
+adaptive_invnorm_wilcoxtest_2s(c(y,yE),c(x,xE),8,16,nE)
+
+## First stage t-test p-value
+t.test(y[1:8],x[1:8],alternative='less',var.equal=T,conf.level=.975)
+t.test(c(y[9:16],yE),c(x[9:16],xE),alternative='less',var.equal=T,conf.level=.975)
+
+## compute the p-values and critical boundaries for the combination test using addplan or east
+install.packages('AGSDest')
+gsd <- plan.GST(K=2,SF=1,alpha=.025,delta=1,pow=.8,phi=0)
+plot(gsd)
+## this is useless
+
+
+delta <- 0
+x1 <- c(y[1:8],x[1:8])
+x2 <- c(y[9:16],x[9:16])
+x3 <- c(yE,xE)
+g1 <- rep(0:1,each=8)
+g2 <- rep(0:1,each=8)
+g3 <- rep(0:1,each=nE-16)
+
+pt <- t.test(c(x1,x2,x3)~c(g1,g2,g3),alternative='less')$p.value
+
+pdist  <- perm_dist(x1,x2,g1,g2,ranksum,B=10000,restricted=T)
+pw <- wilcox.test(c(x1,x2,x3)~c(g1,g2,g3),alternative='less')$p.value
+
+cdist <- adaperm:::cond_dist(x1,x2,g1,g2,ranksum,B=10000,restricted=T)
+edist <- perm_dist(x2,x3,g2,g3,ranksum,B=10000,restricted=T)
+t2 <- ranksum(c(x2,x3),c(g2,g3))
+
+c(sum(pdist>=quantile(cdist,sum(edist<t2)/length(edist)))/length(pdist),pt,pw)
+
+
+
+par(mfrow=c(3,1))
+xl <- min(c(pdist,cdist,edist))
+xu <- max(c(pdist,cdist,edist))
+hist(pdist,xlim=c(xl,xu))
+hist(cdist,xlim=c(xl,xu))
+hist(edist,xlim=c(xl,xu))
+abline(v=t2)
 
 ```
 
