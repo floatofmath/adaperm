@@ -369,17 +369,22 @@ out <- replicate(1000,{
     print(rnE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T))
     print(nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=F))
     c(rnE=rnE,nE=nE,rpv=robust_pooled_variance(x[1:8],y[1:8]),pv=pooled_variance(c(x[1:8],y[1:8]),rep(0:1,each=8)))})
+## nE should be 28, var 64
+rowMeans(out)
 
 power.z.test <- function(delta,sigma,target,alpha=.025) 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*(sigma/delta)^2
 
-n0 <- ceiling(power.z.test(6,6,.8))
+print(n0 <- ceiling(power.z.test(6,6,.8)))
 
 set.seed(5449219)
 x <- rnorm_cont(16,25,8,cshift=0,csd=24)
 y <- rnorm_cont(16,19,8,cshift=0,csd=24)
 boxplot(cbind(x,y),ylim=c(0,56))
-print(nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T))
+## using the normal distribution conditional power rule suggested overall sample size is 48
 cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=F)
+## using the robust variance estiamte the suggested sample size rule is 32
+print(nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T))
+
 xE <- rnorm_cont(nE-16,25,8,cshift=0,csd=24)
 yE <- rnorm_cont(nE-16,19,8,cshift=0,csd=24)
 adaperm(c(y,yE,x,xE),g=rep(0:1,each=nE),8,16,test_statistic=ranksum,cer_type='randomized',atest_type='non-randomized')
@@ -394,10 +399,63 @@ t.test(y[1:8],x[1:8],alternative='less',var.equal=T,conf.level=.975)
 t.test(c(y[9:16],yE),c(x[9:16],xE),alternative='less',var.equal=T,conf.level=.975)
 
 ## compute the p-values and critical boundaries for the combination test using addplan or east
-install.packages('AGSDest')
-gsd <- plan.GST(K=2,SF=1,alpha=.025,delta=1,pow=.8,phi=0)
-plot(gsd)
+##install.packages('AGSDest')
+## library(AGSDest)
+## gsd <- plan.GST(K=2,SF=1,alpha=.025,delta=1,pow=.8,phi=0)
+## plot(gsd)
 ## this is useless
+
+## invnorm estimates and CI
+dec <- function(delta,alpha){
+    adaptive_invnormtest_2s(c(y,yE)+delta,c(x,xE),8,16,nE,alpha=alpha)
+}
+
+## lower confidence bound
+dec(-1.15758,.025)
+dec(-1.15759,.025)
+
+## median unbiased estimate
+dec(5.5779,.5)
+dec(5.578,.5)
+
+bisect <- function(lower,upper,fun,tol=0.0001,...){
+    mid  <- (upper + lower)/2
+    if(abs(upper - lower) < tol){
+        return(mid)
+    }
+    lambda <- function(lower,upper,fun,flow,fup,...){
+        mid  <- (upper + lower)/2
+        if(abs(upper - lower) < tol){
+            return(mid)
+        }
+        fmid <- fun(mid,...)
+        if(fmid == flow){
+            flow  <- fmid
+            lower  <- mid
+        } else {
+            fup  <- fmid
+            upper  <- mid
+        }
+        lambda(lower,upper,fun,flow,fup,...)
+    }
+    flow <- fun(lower,...)
+    fup <- fun(upper,...)
+    if(lower == upper){
+        stop('not different')
+    }
+    lambda(lower,upper,fun,flow,fup)
+}
+
+
+## lower confidence bound
+decw(-1.15758,.025)
+decw(-1.15759,.025)
+
+bisect(-10,10,function(x) dec(x,alpha=.025))
+## median unbiased estimate
+bisect(-10,10,function(x) dec(x,alpha=.5))
+
+
 
 
 delta <- 0
