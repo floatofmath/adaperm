@@ -21,7 +21,8 @@ adaperm(x, g = NULL, n1, n, m1 = n1, m = n, test_statistic,
 
 \item{m}{Pre-planned overall treatment-group sample size (will be ignored if \code{g} is \code{NULL})}
 
-\item{test_statistic}{Test statistic}
+\item{test_statistic}{Test statistic
+@param alpha0 Early rejection boundary for group sequential trial}
 
 \item{alpha}{Significance level}
 
@@ -38,6 +39,9 @@ An object of class \code{htest}
 }
 \description{
 Main user interface for adaperm
+}
+\details{
+Group sequentialism assumes that the trial does not stop at the first stage - otherwise second stage data would not be available.
 }
 \author{
 Florian Klinglmueller

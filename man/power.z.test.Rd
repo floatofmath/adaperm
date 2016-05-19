@@ -2,21 +2,31 @@
 % Please edit documentation in R/utilities.R
 \name{power.z.test}
 \alias{power.z.test}
-\title{sample size formula one-sample z-test}
+\title{sample size formula for z-test (with known variance)}
 \usage{
-power.z.test(power, delta, sd, sig.level = 0.025)
+power.z.test(delta, sd, sig.level = 0.025, power = 0.8,
+  type = c("two.sample", "one.sample", "paired"),
+  alternative = c("one.sided", "two.sided"))
 }
 \arguments{
-\item{power}{desired power}
-
 \item{delta}{mean}
 
 \item{sd}{standard deviation}
 
 \item{sig.level}{significance level}
+
+\item{power}{desired power}
+
+\item{type}{either \code{"two.sample"}, \code{"one.sample"}, or \code{"paired"}}
+
+\item{alternative}{either \code{"one.sided"} or \code{"two.sided"}}
 }
 \value{
-sample size
+sample size (rounded to the next larger integer)
+}
+\examples{
+power.z.test(delta=1,sd=1,power=.8)
+power.t.test(delta=1,sd=1,power=.8)
 }
 \author{
 Florian Klinglmueller

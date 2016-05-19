@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{cond_power_rule_norm}
 \alias{cond_power_rule_norm}
-\title{Conditional power sample size reassessment rule (z-test)}
+\title{Conditional power sample size reassessment rule (one-sample z-test)}
 \usage{
 cond_power_rule_norm(x1, m = 1, target = 0.9, alpha = 0.025, maxN = Inf)
 }

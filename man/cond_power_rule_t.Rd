@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{cond_power_rule_t}
 \alias{cond_power_rule_t}
-\title{Conditional power sample size reassessment rule (t-test)}
+\title{Conditional power sample size reassessment rule (one-sample t-test)}
 \usage{
 cond_power_rule_t(x1, m = 1, target = 0.9, alpha = 0.025, maxN = Inf)
 }
