@@ -197,8 +197,15 @@ find_param <- function(rfun,n0,delta=1,target=.9,up=5,low=1/2,replication=1000){
     
 find_param(function(n0,param,delta) rnorm(n0,m=delta,sd=param),10,target=.70)
 find_param(function(n0,param,delta) rnorm_cont(n0,m=delta,sd=param,cshift=0,csd=3*param),10,target=.70)
-find_param(function(n0,param,delta) log(rgamma(n0,1.2))*param+delta,10,target=.80,low=.01,up=10)
 find_param(function(n0,param,delta) rt(n0,4,ncp=delta*param),10,target=.70)
+
+find_param(function(n0,param,delta) rnorm(n0,m=delta,sd=param),30,target=.70)
+find_param(function(n0,param,delta) rnorm_cont(n0,m=delta,sd=param,cshift=0,csd=3*param),30,target=.70)
+find_param(function(n0,param,delta) rt(n0,4,ncp=delta*param),30,target=.70)
+
+find_param(function(n0,param,delta) rnorm(n0,m=delta,sd=param),100,target=.70)
+find_param(function(n0,param,delta) rnorm_cont(n0,m=delta,sd=param,cshift=0,csd=3*param),100,target=.70)
+find_param(function(n0,param,delta) rt(n0,4,ncp=delta*param),100,target=.70,low=.1,up=10)
 
 
 plot(density(-log(rgamma(1000,4))*.9))
@@ -591,8 +598,8 @@ run_scenario <- function(scenario){
                  invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
                  invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
                  adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-                 adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5)
-#                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
+                 adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
+                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5)
 #                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
 #                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
 #                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
@@ -614,8 +621,8 @@ simulate_scenario <- function(scenario,B){
                   invnorm_w=mean(invnorm_w),
                   adaperm_t=mean(adaperm_t),
 #                  adaperm_w=mean(adaperm_w),
-                  adaperm_rw=mean(adaperm_rw)
-#                  adaperm_rwp=mean(adaperm_rwp),
+                  adaperm_rw=mean(adaperm_rw),
+                  adaperm_rwp=mean(adaperm_rwp)
 #                  adaperm_ut=mean(adaperm_ut),
 #                  adaperm_uw=mean(adaperm_uw)
                   )
@@ -625,23 +632,22 @@ simulate_scenario <- function(scenario,B){
 
 ```{r ,eval=F}
 
-scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4),rep(15,4)),2),
-                n =  rep(c(rep(10,4),rep(100,4),rep(30,4)),2),
-                distribution = rep(rep(c('normal','log-gamma','t4','cont'),3),2),
+scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
+                n =  rep(c(rep(10,3),rep(100,3),rep(30,3)),2),
+                distribution = rep(rep(c('normal','t4','cont'),3),2),
                 parameter =rep(c(
-                    0.80,0.65,0.35,0.65,
-                    3.20,0.40,0.35,2.80,
-                    1.70,0.75,0.65,1.30),2),
-                delta0 = rep(0:1,each=12),
-                sigma0 = rep(rep(c(.6,2.5,1.35),each=4),2))
+                    0.80,1.40,0.65,
+                    2.80,0.40,2.10,
+                    1.55,0.75,1.20),2),
+                delta0 = rep(0:1,each=9),
+                sigma0 = rep(rep(c(.6,2.5,1.35),each=3),2))
                 
-## simulate_scenario(scenarios[2,],1000)
-simulate_scenario(scenarios[14,],1000)
-simulate_scenario(scenarios[16,],1000)
+## simulate_scenario(scenarios[11,],1000)
+
 ## run_scenario(scenarios[2,])
-## run_scenario(scenarios[10,])
+## run_scenario(scenarios[11,])
 out <- list() 
-for(i in c(13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
+for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 
