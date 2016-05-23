@@ -534,55 +534,56 @@ dev.off()
 
 
 run_scenario <- function(scenario){
-    with(scenario,{
-             xdist = function(N) {
-                 switch(distribution,
-                        'normal'=rnorm(N,m=0,sd=parameter),
-                        'log-gamma'=log(rgamma(N,1)),
-                        't4'=rt(N,4),
-                        'cont'=rnorm_cont(N,m=0,sd=parameter,cshift=0,csd=3*parameter),
-                        'count'=)
-             }
-             ydist = function(N) {
-                 switch(distribution,
-                        'normal'=rnorm(N,m=delta0,sd=parameter),
-                        'log-gamma'=log(rgamma(N,1))+delta0*parameter,
-                        't4'=rt(N,4,ncp=delta0*parameter),
-                        'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
-                        'count'=)
-             }
-             x1 <- xdist(n1)
-             y1 <- ydist(n1)
-             delta <- c('normal'=1,
-                        'log-gamma'=parameter,
-                        't4'=parameter,
-                        'cont'=1)[distribution]
-             nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
-             
-             n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
-             exact  <- n_combs>10^5
+    attach(scenario)
+    xdist = function(N) {
+        switch(distribution,
+               'normal'=rnorm(N,m=0,sd=parameter),
+               'log-gamma'=log(rgamma(N,1)),
+               't4'=rt(N,4),
+               'cont'=rnorm_cont(N,m=0,sd=parameter,cshift=0,csd=3*parameter),
+               'count'=)
+    }
+    ydist = function(N) {
+        switch(distribution,
+               'normal'=rnorm(N,m=delta0,sd=parameter),
+               'log-gamma'=log(rgamma(N,1))+delta0*parameter,
+               't4'=rt(N,4,ncp=delta0*parameter),
+               'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
+               'count'=)
+    }
+    x1 <- xdist(n1)
+    y1 <- ydist(n1)
+    delta <- c('normal'=1,
+               'log-gamma'=parameter,
+               't4'=parameter,
+               'cont'=1)[distribution]
+    nE <- max(n,cond_power_rule_t_ts(x1,y1,delta=delta,target=.8))
+    
+    n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
+    exact  <- n_combs>10^5
                                         #  <- ifelse(n_combs>10000,'davison_hinkley','midp')
-             ttpe <- 'non-randomized'
-             cete <- 'non-randomized'
-             x <- c(x1,xdist(nE-n1))
-             y <- c(y1,ydist(nE-n1))
-             data_frame(
-                 exact=exact,
-                 nE=nE,
-#                 fixed_t=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),tstat,10^5,restricted=T)<=0.025,
-#                 fixed_w=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),ranksum,10^5,restricted=T)<=0.025,
-                 invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
-                 invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-                 adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type=ttpe,permutations=10^5),
-                 adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-#                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
-#                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
-#                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
-#                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
-                 )
-                                        #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
-         })
+    ttpe <- 'non-randomized'
+    cete <- 'non-randomized'
+    x <- c(x1,xdist(nE-n1))
+    y <- c(y1,ydist(nE-n1))
+    out <- data_frame(
+        exact=exact,
+        nE=nE,
+        invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE),
+        invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
+        adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type=ttpe,permutations=10^5),
+        adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5))
+    detach(scenario)
+    out
 }
+##                 fixed_t=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),tstat,10^5,restricted=T)<=0.025,
+##                 fixed_w=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),ranksum,10^5,restricted=T)<=0.025,
+##                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
+##                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
+##                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
+##                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
+##             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
+
 
 simulate_scenario <- function(scenario,B){
     bind_rows(mclapply2(1:B,function(i) run_scenario(scenario))) %>%
@@ -617,12 +618,12 @@ scenarios <- data_frame(n1 = rep(c(rep(5,4),rep(50,4),rep(15,4)),2),
                 delta0 = rep(0:1,each=12),
                 sigma0 = rep(rep(c(.6,2.5,1.35),each=4),2))
                 
-## simulate_scenario(scenarios[2,],1000)
+##simulate_scenario(scenarios[2,],1000)
 ## simulate_scenario(scenarios[10,],5000)
-## run_scenario(scenarios[2,])
+run_scenario(scenarios[2,])
 ## run_scenario(scenarios[10,])
 out <- list() 
-for(i in c(1:4,9:16,21:24)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=10000))
+for(i in c(13:16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 
