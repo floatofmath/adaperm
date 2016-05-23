@@ -240,21 +240,36 @@ simulate_trials <- function(MCMC,n1,n,n3=0,r=1/2,rfs=rnorm,rss=rnorm,ncp=0,cond=
 ## expect_equal(unique(colSums(s1$g[1:n1,])),floor(1/2*n1))
 ## expect_equal(unique(colSums(s1$g[(n1+1):n,])),floor(1/2*(n-n1)))
 
-##' @title sample size formula one-sample z-test
-##' @param power desired power
+##' @title sample size formula for z-test (with known variance)
 ##' @param delta mean
 ##' @param sd standard deviation
 ##' @param sig.level significance level
-##' @return sample size
+##' @param power desired power
+##' @param type either \code{"two.sample"}, \code{"one.sample"}, or \code{"paired"}
+##' @param alternative either \code{"one.sided"} or \code{"two.sided"}
+##' @return sample size (rounded to the next larger integer)
 ##' @author Florian Klinglmueller
-power.z.test <- function(power,delta,sd,sig.level=.025){
+##' @examples
+##' power.z.test(delta=1,sd=1,power=.8)
+##' power.t.test(delta=1,sd=1,power=.8)
+##' @export
+power.z.test <- function(delta,sd,sig.level=.025,power=0.8,
+                         type = c("two.sample", "one.sample", "paired"),
+                         alternative = c("one.sided", "two.sided")){
+    type=match.arg(type)[1]
+    alternative=match.arg(alternative)[1]
+    if(alternative == "two.sided") sig.level  <- sig.level/2
     dfact <- qnorm(sig.level,lower.tail=F)+qnorm(1-power,lower.tail=F)
-    ceiling(sd/delta^2 * (dfact)^2)
+    if(type == "two.sample") dfact <- dfact*sqrt(2)
+    cat("NOTE: n is the number in *each* group\n")
+    ceiling((sd/delta)^2 * (dfact)^2)
 }
+
+
     
 ##' Conditional power rule for the one-sample (or paired) z-test using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
 ##'
-##' @title Conditional power sample size reassessment rule (z-test)
+##' @title Conditional power sample size reassessment rule (one-sample z-test)
 ##' @template power_rules
 ##' @author Florian Klinglmueller
 ##' @export
@@ -266,12 +281,35 @@ cond_power_rule_norm <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
 
 ##' Conditional power rule for the one-sample (or paired) t-test using the function \code{link{stats::power.t.test}}. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
 ##' 
-##' @title Conditional power sample size reassessment rule (t-test)
+##' @title Conditional power sample size reassessment rule (one-sample t-test)
 ##' @template power_rules
 ##' @author Florian Klinglmueller
 ##' @export
 cond_power_rule_t <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
     min(maxN,ceiling(power.t.test(power=target,delta=m,sd=sd(x),sig.level=alpha,type='one.sample',alternative='one.sided')$n))
+}
+##' @title Robust pooled variance estimate
+##' @param x control group observations
+##' @param y treatment group observations
+##' @return robust variance estimate
+##' @author float
+robust_pooled_variance <- function(x,y){
+    (iqr(c(x-median(x),y-median(y)))/1.349)^2
+}
+
+##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
+##' 
+##' @title Conditional power sample size reassessment rule (two-sample z-test)
+##' @template power_rules_ts
+##' @author Florian Klinglmueller
+##' @export
+cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x)*6,rob_var=T){
+    n1 <- length(x)
+    var <- ifelse(rob_var,
+                  robust_pooled_variance(x1,y1),
+                  pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
+    nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
+    ceiling(min(maxN,nE))
 }
 
 ##' Computes the inverse normal combination (sqrt(w1)*qnorm(1-p1) + sqrt(w2)*qnorm(1-p2)) of two (independent) p-values
@@ -301,5 +339,66 @@ recycle <- function(a,b){
     } else {
         a
     }
+}
+
+##' Implements basic bisection search for root finding. In contrast to uniroot this can also deal with the case where the result of \code{fun} is binary - in this case the \code{bisect} finds the changepoint. 
+##'
+##' @title Bisection search
+##' @param lower lower bound of search range
+##' @param upper upper bound of search range
+##' @param fun function whose root is to be found
+##' @param tol error tolerance
+##' @param ... additional arguments to be passed to the function
+##' @return root
+##' @author float
+##' @examples
+##' set.seed(5449219)
+##' x <- rnorm_cont(16,25,8,cshift=0,csd=24)
+##' y <- rnorm_cont(16,19,8,cshift=0,csd=24)
+##' cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=F)
+##' nE <- cond_power_rule_norm_ts(x[1:8],y[1:8],delta=6,target=.8,rob_var=T)
+##' xE <- rnorm_cont(nE-16,25,8,cshift=0,csd=24)
+##' yE <- rnorm_cont(nE-16,19,8,cshift=0,csd=24)
+##' 
+##'
+##' combtest <- function(delta,alpha){
+##'    adaptive_invnormtest_2s(c(y,yE)+delta,c(x,xE),8,16,nE,alpha=alpha)
+##' }
+##' 
+##' bisect(-10, 10, combtest, alpha = 0.5)
+##' @export
+bisect <- function(lower,upper,fun,tol=0.0001,...){
+    opts <- list(...)
+    mid  <- (upper + lower)/2
+    if(upper < lower){
+        tmp <- lower
+        lower <- upper
+        upper <- tmp
+        warning("Lower bound larger than upper bound")
+    }
+    if(abs(upper - lower) < tol){
+        return(mid)
+    }
+    lambda <- function(lower,upper,fun,flow,fup,opts){
+        mid  <- {upper + lower}/2
+        if(upper - lower < tol){
+            return(mid)
+        }
+        fmid <- do.call(fun,c(mid,opts))
+        if(sign(fmid) == sign(flow)){
+            flow  <- fmid
+            lower  <- mid
+        } else {
+            fup  <- fmid
+            upper  <- mid
+        }
+        lambda(lower,upper,fun,flow,fup,opts)
+    }
+    flow <- do.call(fun,c(lower,opts))
+    fup <- do.call(fun,c(upper,opts))
+    if(sign(flow) == sign(fup)){
+        stop('not different')
+    }
+    lambda(lower,upper,fun,flow,fup,opts)
 }
 
