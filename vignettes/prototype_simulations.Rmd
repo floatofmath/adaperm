@@ -587,7 +587,16 @@ run_scenario <- function(scenario){
                  )})
                                         #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
 
+>>>>>>> 27e6ea23a71ec8533fadacb79ce1f38248ff0489
 }
+##                 fixed_t=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),tstat,10^5,restricted=T)<=0.025,
+##                 fixed_w=perm_test(c(x[1:n1],y[1:n1]),c(x[(n1+1):n],y[(n1+1):n]),rep(0:1,each=n1),rep(0:1,each=n1),ranksum,10^5,restricted=T)<=0.025,
+##                 adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5),
+##                 adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5),
+##                 adaperm_ut=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE),
+##                 adaperm_uw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5,stratified=FALSE)
+##             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
+
 
 simulate_scenario <- function(scenario,B){
     bind_rows(mclapply2(1:B,function(i) run_scenario(scenario))) %>%
