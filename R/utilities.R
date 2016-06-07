@@ -294,6 +294,7 @@ cond_power_rule_t <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
 ##' @param ... additional arguments to mad
 ##' @return robust variance estimate
 ##' @author float
+##' @export
 robust_pooled_variance <- function(x,y,...){
     mad(c(x-mean(x),y-mean(y)),...)^2
 }
@@ -302,9 +303,10 @@ robust_pooled_variance <- function(x,y,...){
 ##' 
 ##' @title Conditional power sample size reassessment rule (two-sample z-test)
 ##' @template power_rules_ts
+##' @param ... additional arguments to \code{\link{robust_pooled_variance}}
 ##' @author Florian Klinglmueller
 ##' @export
-cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T){
+cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T,...){
     n1 <- length(x)
     var <- ifelse(rob_var,
                   robust_pooled_variance(x1,y1),

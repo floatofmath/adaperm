@@ -5,7 +5,7 @@
 \title{Conditional power sample size reassessment rule (two-sample z-test)}
 \usage{
 cond_power_rule_norm_ts(x1, y1, delta = 1, target = 0.9, alpha = 0.025,
-  maxN = length(x1) * 6, rob_var = T)
+  maxN = length(x1) * 6, rob_var = T, ...)
 }
 \arguments{
 \item{x1}{First stage observations}
@@ -19,6 +19,8 @@ cond_power_rule_norm_ts(x1, y1, delta = 1, target = 0.9, alpha = 0.025,
 \item{maxN}{Maximum sample size}
 
 \item{rob_var}{Use robust variance estimate}
+
+\item{...}{additional arguments to \code{\link{robust_pooled_variance}}}
 
 \item{m}{Target mean value}
 }
