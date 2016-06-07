@@ -291,10 +291,11 @@ cond_power_rule_t <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
 ##' @title Robust pooled variance estimate
 ##' @param x control group observations
 ##' @param y treatment group observations
+##' @param ... additional arguments to mad
 ##' @return robust variance estimate
 ##' @author float
-robust_pooled_variance <- function(x,y){
-    mad(c(x-mean(x),y-mean(y)))^2
+robust_pooled_variance <- function(x,y,...){
+    mad(c(x-mean(x),y-mean(y)),...)^2
 }
 
 ##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
@@ -303,7 +304,7 @@ robust_pooled_variance <- function(x,y){
 ##' @template power_rules_ts
 ##' @author Florian Klinglmueller
 ##' @export
-cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x)*6,rob_var=T){
+cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T){
     n1 <- length(x)
     var <- ifelse(rob_var,
                   robust_pooled_variance(x1,y1),
