@@ -288,15 +288,60 @@ cond_power_rule_norm <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
 cond_power_rule_t <- function(x1,m=1,target=.9,alpha=.025,maxN=Inf){
     min(maxN,ceiling(power.t.test(power=target,delta=m,sd=sd(x),sig.level=alpha,type='one.sample',alternative='one.sided')$n))
 }
+
+
+##' Compute the robust scale measure Sn given in "Rousseeuw and Croux (1993)" which is about 58% efficient efficient compared to the standard deviation and has a breakdown point of 50%.
+##'
+##' The default scaling factor is chosen such that the estimate is approximately consistent for normal observations. For different reference distributions other factors may be more apropriate. Note however, that we have hardcoded the bias correction constants applied to small samples - these may differ as well for other reference distributions. Changing the factor may be futile.
+##'
+##' Note that we use a computationally suboptimal implementation that uses \code{O(n^2)} operations. If time allows we may implement the more efficient method given in "Croux and Rousseeuw (1992)" which requires only \code{O(n*log(n))} operations.
+##' @title Robust scale estimate Sn
+##' @param x vector of observations
+##' @param factor Scaling factor
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+sn <- function(x,factor=1.1926){
+    n <- length(x)
+    cns <- c(0.743,1.851,0.954,1.351,0.993,1.198,1.005,1.131)
+    cn <- ifelse(n>9,n/(n-(n%%2/10)),cns[n-1])
+    cn*factor*sort(matrixStats::rowOrderStats(abs(matrix(x,length(x),length(x)) - matrix(x,length(x),length(x),byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
+}
+
+##' Compute the robust scale measure Qn given in "Rousseeuw and Croux (1993)" which is about 86% efficient compared to the standard deviation and has a breakdown point of 50%.
+##'
+##' The default scaling factor is chosen such that the estimate is approximately consistent for normal observations. For different reference distributions other factors may be more apropriate. Note however, that we have hardcoded the bias correction constants applied to small samples - these may differ as well for other reference distributions. Changing the factor may be futile.
+##'
+##' Note that we use a computationally suboptimal implementation that uses \code{O(n^2)} operations. If time allows we may implement the more efficient method given in "Croux and Rousseeuw (1992)" which requires only \code{O(n*log(n))} operations.
+##' @title Robust scale estimate Qn
+##' @param x vector of observations
+##' @param factor Scaling factor
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+qn <- function(x,factor=2.2219){
+    n <- length(x)
+    cns <- c(0.399,0.994,0.512,0.844,0.611,0.857,0.669,0.872)
+    cn <- ifelse(n>9,n/(n+(3.8-n%%2*2.4)),cns[n-1])
+    xm <- abs(matrix(x,length(x),length(x)) - matrix(x,length(x),length(x),byrow=T))
+    cn*factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
+}
+    
 ##' @title Robust pooled variance estimate 
 ##' @param x control group observations
 ##' @param y treatment group observations
-##' @param ... additional arguments to mad
+##' @param type what estimator to use
+##' @param factor multiplication constant
 ##' @return robust variance estimate
 ##' @author float
-##' @export
-robust_pooled_variance <- function(x,y,...){
-    mad(c(x-median(x),y-median(y)),...)^2
+robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL){
+    type  <- match.arg(type)
+    scale_m <- switch(type,
+                      'qn' = function(xs) qn(xs,factor=ifelse(is.null(factor),2.2219)),
+                      'sn' = function(xs) sn(xs,factor=ifelse(is.null(factor),1.1926)),
+                      'iqr' = function(xs) IQR(xs)*ifelse(is.null(factor),1/1.349),
+                      'mad' = function(xs) mad(xs,constant=ifelse(is.null(factor),1.4826)))
+    (length(x)*scale_m(x)^2 + length(y)*scale_m(y)^2)/length(c(x,y))
 }
 
 ##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.

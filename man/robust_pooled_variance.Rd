@@ -4,14 +4,17 @@
 \alias{robust_pooled_variance}
 \title{Robust pooled variance estimate}
 \usage{
-robust_pooled_variance(x, y, ...)
+robust_pooled_variance(x, y, type = c("qn", "sn", "iqr", "mad"),
+  factor = NULL)
 }
 \arguments{
 \item{x}{control group observations}
 
 \item{y}{treatment group observations}
 
-\item{...}{additional arguments to mad}
+\item{type}{what estimator to use}
+
+\item{factor}{multiplication constant}
 }
 \value{
 robust variance estimate
