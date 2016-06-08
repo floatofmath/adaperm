@@ -305,7 +305,7 @@ sn <- function(x,factor=1.1926){
     n <- length(x)
     cns <- c(0.743,1.851,0.954,1.351,0.993,1.198,1.005,1.131)
     cn <- ifelse(n>9,n/(n-(n%%2/10)),cns[n-1])
-    cn*factor*sort(matrixStats::rowOrderStats(abs(matrix(x,length(x),length(x)) - matrix(x,length(x),length(x),byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
+    cn*factor*sort(matrixStats::rowOrderStats(abs(matrix(x,n,n) - matrix(x,n,n,byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
 }
 
 ##' Compute the robust scale measure Qn given in "Rousseeuw and Croux (1993)" which is about 86% efficient compared to the standard deviation and has a breakdown point of 50%.
@@ -323,10 +323,60 @@ qn <- function(x,factor=2.2219){
     n <- length(x)
     cns <- c(0.399,0.994,0.512,0.844,0.611,0.857,0.669,0.872)
     cn <- ifelse(n>9,n/(n+(3.8-n%%2*2.4)),cns[n-1])
-    xm <- abs(matrix(x,length(x),length(x)) - matrix(x,length(x),length(x),byrow=T))
+    xm <- abs(matrix(x,n,n) - matrix(x,n,n,byrow=T))
     cn*factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
 }
-    
+
+
+##' Compute the robust scale measure Qn pooled over two samples.
+##'
+##' The default scaling factor is chosen such that the estimate is approximately consistent for normal observations. For different reference distributions other factors may be more apropriate. Note however, that we have hardcoded the bias correction constants applied to small samples - these may differ as well for other reference distributions. Changing the factor may be futile.
+##'
+##' Note that we use a computationally suboptimal implementation that uses \code{O(n^2)} operations. If time allows we may implement the more efficient method given in "Croux and Rousseeuw (1992)" which requires only \code{O(n*log(n))} operations.
+##' @title Robust scale estimate Qn pooled sample
+##' @param x vector of observations
+##' @param y vector of observations
+##' @param factor Scaling factor
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+qnp <- function(x,y,factor=2.2219){
+    n1 <- length(x)
+    n2 <- length(x)
+    cns <- c(0.399,0.994,0.512,0.844,0.611,0.857,0.669,0.872)
+    cn1 <- ifelse(n1>9,n1/(n1+(3.8-n1%%2*2.4)),cns[n1-1])
+    cn2 <- ifelse(n2>9,n2/(n2+(3.8-n2%%2*2.4)),cns[n2-1])
+    xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
+    ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
+    factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
+}
+
+##' Compute the robust scale measure Sn pooled over two samples. 
+##'
+##' The default scaling factor is chosen such that the estimate is approximately consistent for normal observations. For different reference distributions other factors may be more apropriate. Note however, that we have hardcoded the bias correction constants applied to small samples - these may differ as well for other reference distributions. Changing the factor may be futile.
+##'
+##' Note that we use a computationally suboptimal implementation that uses \code{O(n^2)} operations. If time allows we may implement the more efficient method given in "Croux and Rousseeuw (1992)" which requires only \code{O(n*log(n))} operations.
+##' @title Robust scale estimate Qn pooled sample
+##' @param x vector of observations
+##' @param y vector of observations
+##' @param factor Scaling factor
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+snp <- function(x,y,factor=1.1926){
+    n1 <- length(x)
+    n2 <- length(y)
+    n <- n1+2
+    cns <- c(0.743,1.851,0.954,1.351,0.993,1.198,1.005,1.131)
+    cn1 <- ifelse(n1>9,n1/(n1-(n1%%2/10)),cns[n1-1])
+    cn2 <- ifelse(n2>9,n2/(n2-(n2%%2/10)),cns[n2-1])
+    cn <- ifelse(n>9,n/(n-(n%%2/10)),cns[n-1])
+    xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
+    ym <- matrixStats::rowOrderStats(abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T)),which=floor(n2/2)+1)
+    factor*sort(c(xm,ym))[floor((n1+n2+1)/2)]
+}
+
+
 ##' @title Robust pooled variance estimate 
 ##' @param x control group observations
 ##' @param y treatment group observations
@@ -337,12 +387,41 @@ qn <- function(x,factor=2.2219){
 robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL){
     type  <- match.arg(type)
     scale_m <- switch(type,
-                      'qn' = function(xs) qn(xs,factor=ifelse(is.null(factor),2.2219)),
+                      'qn' = function(xs) qnp(x,y,factor=ifelse(is.null(factor),2.2219)),
                       'sn' = function(xs) sn(xs,factor=ifelse(is.null(factor),1.1926)),
                       'iqr' = function(xs) IQR(xs)*ifelse(is.null(factor),1/1.349),
                       'mad' = function(xs) mad(xs,constant=ifelse(is.null(factor),1.4826)))
     (length(x)*scale_m(x)^2 + length(y)*scale_m(y)^2)/length(c(x,y))
 }
+
+mcrep <- function(n,expr){
+    simplify2array(mclapply2(integer(n),eval.parent(substitute(function(...) expr))))
+}
+library(bt88.03.704)
+options(mc.cores=39)
+
+est <- list()
+for(i in 2:15){                  
+est[[i]] <- rowMeans(mcrep(1000000,{
+    x <- rnorm(i)
+    y <- rnorm(i)+1
+    c(qn=qn(x)^2,
+      qnp=qnp(x,y)^2,
+      sn=sn(x)^2,
+      snp=snp(x,y)^2)
+}))
+}
+
+facs <- do.call(cbind,est)
+sf <- sqrt(facs[2,])
+
+sfo <- sf[1+2*(1:7)]
+o <- 1+2*(1:7)
+sfe <- sf[2*(1:7)]
+e <- 2*(1:7)
+lm(sfo~o)
+lm(sfe~e)
+save(facs,file=vfile('facs_mm'))
 
 ##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
 ##' 

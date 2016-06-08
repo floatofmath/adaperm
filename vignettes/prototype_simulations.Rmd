@@ -565,7 +565,7 @@ run_scenario <- function(scenario){
                'log-gamma'=delta0,
                't4'=delta0,
                'cont'=delta0)[distribution]
-    nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.85,rob_var=T,maxN=6*n1,constant=1.48+1/n1))
+    nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1))
     
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
@@ -645,12 +645,14 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
 
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[11,])
+
 out <- list()
-for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
+for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=10000))
+for(i in c(10,13,16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 print(sims,width=Inf)
-save(sims,file=vfile('~/adaperm_simresults/simulations_unstratified'))
+save(sims,file=vfile('~/adaperm_simresults/simulations_newrules'))
 
 
 
