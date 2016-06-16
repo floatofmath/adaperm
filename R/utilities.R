@@ -433,7 +433,7 @@ robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL
                       'sn' = function(xs,ys) snp(x,y,factor=ifelse(is.null(factor),1.1926,factor)),
                       'iqr' = function(xs,ys) iqrp(x,y)*ifelse(is.null(factor),1,factor),
                       'mad' = function(xs,ys) madp(x,y,factor=ifelse(is.null(factor),1,factor)))
-    scale_m(x,y)
+    scale_m(x,y)^2
 }
 
 
