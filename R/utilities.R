@@ -305,7 +305,7 @@ sn <- function(x,factor=1.1926){
     n <- length(x)
     cns <- c(0.743,1.851,0.954,1.351,0.993,1.198,1.005,1.131)
     cn <- ifelse(n>9,n/(n-(n%%2/10)),cns[n-1])
-    cn*factor*sort(matrixStats::rowOrderStats(abs(matrix(x,n,n) - matrix(x,n,n,byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
+    factor*sort(matrixStats::rowOrderStats(abs(matrix(x,n,n) - matrix(x,n,n,byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
 }
 
 ##' Compute the robust scale measure Qn given in "Rousseeuw and Croux (1993)" which is about 86% efficient compared to the standard deviation and has a breakdown point of 50%.
@@ -324,7 +324,7 @@ qn <- function(x,factor=2.2219){
     cns <- c(0.399,0.994,0.512,0.844,0.611,0.857,0.669,0.872)
     cn <- ifelse(n>9,n/(n+(3.8-n%%2*2.4)),cns[n-1])
     xm <- abs(matrix(x,n,n) - matrix(x,n,n,byrow=T))
-    cn*factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
+    factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
 }
 
 
@@ -344,10 +344,6 @@ qnp <- function(x,y,factor=2.2219){
     n1 <- length(x)
     n2 <- length(x)
     if(n1 != n2) stop('Unequal sample sizes not yet implemented')
-    ## cn <- ifelse(n1%%2<1,
-    ##              -.99    - 0.275 * n1,
-    ##              -1.8  - 0.639 * n1)
-    ## cn <- (1+cn)/cn
     xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
     ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
     factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
@@ -392,59 +388,6 @@ robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL
     (length(x)*scale_m(x)^2 + length(y)*scale_m(y)^2)/length(c(x,y))
 }
 
-mcrep <- function(n,expr){
-    simplify2array(mclapply2(integer(n),eval.parent(substitute(function(...) expr))))
-}
-
-library(bt88.03.704)
-options(mc.cores=39)
-library(parallel)
-est <- list()
-
-for(i in 2:20){                  
-est[[i]] <- rowMeans(mcrep(10^6,{
-    x <- rnorm(i)
-    y <- rnorm(i)+1
-    c(qn=qn(x),
-      qnp=qnp(x,y),
-      sn=sn(x),
-      snp=snp(x,y))
-}))}
-
-facs <- do.call(cbind,est)
-
-sfac <- facs[4,]
-qfac <- facs[2,]
-
-plot(2:15,(1+qfac)/qfac)
-plot(2:15,(1+sfac)/sfac)
-
-n1 <- 2:15
-cn <- ifelse(n1%%2<1,
-             -1      - 0.276 * n1,
-             -1.894  - 0.639 * n1)
-
-
-load('facs_mm_node6_160608.Rd')  #facs <- do.call(cbind,est)
-sf <- sqrt(facs[2,])
-
-sfo <- sf[1+2*(1:7)]
-o <- 1+2*(1:7)
-sfe <- sf[2*(1:7)]
-e <- 2*(1:7)
-
-
-
-lm(sfaco ~ 0 + 
-   
-summary(mo <- lm(I(sfo/(1-sfo))~o))
-summary(me <- lm(I(sfe/(1-sfe))~e))
-plot(o,sfo/(1-sfo))
-abline(mo)
-plot(e,sfe/(1-sfe))
-abline(me)
-
-save(facs,file=vfile('facs_mm'))
 
 ##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
 ##' 
@@ -456,7 +399,7 @@ save(facs,file=vfile('facs_mm'))
 cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T,...){
     n1 <- length(x)
     var <- ifelse(rob_var,
-                  robust_pooled_variance(x1,y1),
+                  robust_pooled_variance(x1,y1,...),
                   pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
     nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
     ceiling(min(maxN,nE))
