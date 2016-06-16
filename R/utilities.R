@@ -343,11 +343,14 @@ qn <- function(x,factor=2.2219){
 qnp <- function(x,y,factor=2.2219){
     n1 <- length(x)
     n2 <- length(x)
+    cns <- c(0.249,0.699,0.451,0.771,0.577,0.823,0.657,0.856,0.712,0.879)
+    cn <- ifelse(n1>11,n1/(n1 + (n1%%2) * 1.5157 + (1-n1%%2) * 3.8839),cns[n1-1])
     if(n1 != n2) stop('Unequal sample sizes not yet implemented')
     xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
     ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
-    factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
+    cn*factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
 }
+
 
 ##' Compute the robust scale measure Sn pooled over two samples. 
 ##'
@@ -364,11 +367,55 @@ qnp <- function(x,y,factor=2.2219){
 snp <- function(x,y,factor=1.1926){
     n1 <- length(x)
     n2 <- length(y)
+    cns <- c(0.982,1.302,0.846,1.137,0.877,1.078,0.899,1.048,0.914,1.032)
+    cn <- ifelse(n1>11,n1/(n1 + (1-n1%%2) * 1.0327 - (n1%%2) * 0.2468),cns[n1-1])
     if(n1 != n2) stop('Unequal sample sizes not yet implemented')
     xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
     ym <- matrixStats::rowOrderStats(abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T)),which=floor(n2/2)+1)
-    factor*sort(c(xm,ym))[n1]
+    cn*factor*sort(c(xm,ym))[n1]
 }
+
+##' Compute the median absolute deviation pooled over two samples
+##'
+##' We subtract the median from each group and then compute the MAD from the combination of the (shifted) samples. Finite sample corretion factors have been estimated from a simulation study and work well to produce nearly unbiased estimates for normally distributed samples.
+##' 
+##' The scaling factor does nothing.
+##'
+##' @title MAD of pooled samples
+##' @param x vector of observations
+##' @param y vector of observations
+##' @param factor Scaling factor (deprecated)
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+madp <- function(x,y,factor=1){
+    n1 <- length(x)
+    cns <- c(1.054,1.429,1.239,1.178,1.167,1.111,1.111,1.080,1.081,1.063)
+    cn <- ifelse(n1>11,n1/(n1 - 0.659),cns[n1-1])
+    cn*mad(c(x-median(x),y-median(y)))
+}
+
+
+##' Compute the interquartile range pooled over two samples
+##'
+##' We subtract the median from each group and then compute the interquartile range from the combination of the (shifted) samples. Finite sample corretion factors have been estimated from a simulation study. Those do not work particularly well to produce nearly unbiased estimates for normally distributed samples but are better than nothing.
+##'
+##' The scaling factor does nothing.
+##'
+##' @title MAD of pooled samples
+##' @param x vector of observations
+##' @param y vector of observations
+##' @param factor Scaling factor (deprecated)
+##' @return numeric value 
+##' @author Florian Klinglmueller
+##' @export
+iqrp <- function(x,y,factor=1){
+    n1 <- length(x)
+    cns <- c(1.186,1.241,1.197,1.173,1.159,1.136,1.129,1.112,1.108,1.097)
+    cn <- ifelse(n1>11,n1/(n1 - 1.046),cns[n1-1])
+    cn*IQR(c(x-median(x),y-median(y)))/(2*qnorm(3/4))
+}
+
 
 
 ##' @title Robust pooled variance estimate 
@@ -378,14 +425,15 @@ snp <- function(x,y,factor=1.1926){
 ##' @param factor multiplication constant
 ##' @return robust variance estimate
 ##' @author float
+##' @export
 robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL){
     type  <- match.arg(type)
     scale_m <- switch(type,
-                      'qn' = function(xs) qnp(x,y,factor=ifelse(is.null(factor),2.2219)),
-                      'sn' = function(xs) sn(xs,factor=ifelse(is.null(factor),1.1926)),
-                      'iqr' = function(xs) IQR(xs)*ifelse(is.null(factor),1/1.349),
-                      'mad' = function(xs) mad(xs,constant=ifelse(is.null(factor),1.4826)))
-    (length(x)*scale_m(x)^2 + length(y)*scale_m(y)^2)/length(c(x,y))
+                      'qn' = function(xs,ys) qnp(x,y,factor=ifelse(is.null(factor),2.2219,factor)),
+                      'sn' = function(xs,ys) snp(x,y,factor=ifelse(is.null(factor),1.1926,factor)),
+                      'iqr' = function(xs,ys) iqrp(x,y)*ifelse(is.null(factor),1,factor),
+                      'mad' = function(xs,ys) madp(x,y,factor=ifelse(is.null(factor),1,factor)))
+    scale_m(x,y)
 }
 
 
@@ -397,7 +445,6 @@ robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL
 ##' @author Florian Klinglmueller
 ##' @export
 cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T,...){
-    n1 <- length(x)
     var <- ifelse(rob_var,
                   robust_pooled_variance(x1,y1,...),
                   pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
