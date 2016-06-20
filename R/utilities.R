@@ -452,6 +452,22 @@ cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=len
     ceiling(min(maxN,nE))
 }
 
+##' Conditional power rule for the two-sample t-test using the function using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
+##' 
+##' @title Conditional power sample size reassessment rule (two-sample z-test)
+##' @template power_rules_ts
+##' @param ... additional arguments to \code{\link{robust_pooled_variance}}
+##' @author Florian Klinglmueller
+##' @export
+cond_power_rule_t_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T,...){
+    var <- ifelse(rob_var,
+                  robust_pooled_variance(x1,y1,...),
+                  pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
+    nE <- min(maxN,ceiling(power.t.test(power=target,delta=delta,sd=sqrt(var),sig.level=alpha,type='two.sample',alternative='one.sided')$n))
+    ceiling(min(maxN,nE))
+}
+
+
 ##' Computes the inverse normal combination (sqrt(w1)*qnorm(1-p1) + sqrt(w2)*qnorm(1-p2)) of two (independent) p-values
 ##'
 ##' @title Inverse normal combination function
