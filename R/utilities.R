@@ -447,7 +447,7 @@ robust_pooled_variance <- function(x,y,type=c('qn','sn','iqr','mad'),factor=NULL
 cond_power_rule_norm_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length(x1)*6,rob_var=T,...){
     var <- ifelse(rob_var,
                   robust_pooled_variance(x1,y1,...),
-                  pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
+                  pooled_variance(c(x1,y1),rep(0:1,c(length(x1),length(y1)))))
     nE <- 2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
     ceiling(min(maxN,nE))
 }
@@ -463,7 +463,11 @@ cond_power_rule_t_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length
     var <- ifelse(rob_var,
                   robust_pooled_variance(x1,y1,...),
                   pooled_variance(c(x1,y1),c(rep(0,length(x1)),rep(1,length(y1)))))
-    nE <- min(maxN,ceiling(power.t.test(power=target,delta=delta,sd=sqrt(var),sig.level=alpha,type='two.sample',alternative='one.sided')$n))
+    nE <- try(power.t.test(power=target,delta=delta,sd=sqrt(var),sig.level=alpha,type='two.sample',alternative='one.sided')$n,silent=T)
+    if(class(nE)=='try-error'){
+        nE <- 1+2*(qnorm(alpha,lower=F)+ qnorm(target))^2*var/(delta^2)
+        warning(paste0('Numerical fail in t-test SSR, use normal approximation: nE=',nE,' n1=',length(x1)))
+    }
     ceiling(min(maxN,nE))
 }
 
