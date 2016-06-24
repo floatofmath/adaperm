@@ -343,8 +343,8 @@ qn <- function(x,factor=2.2219){
 qnp <- function(x,y,factor=2.2219){
     n1 <- length(x)
     n2 <- length(x)
-    cns <- c(0.249,0.699,0.451,0.772,0.577,0.823,0.657,0.856,0.712,0.879)
-    cn <- ifelse(n1>11,n1/(n1 + (n1%%2) * 1.5156 + (1-n1%%2) * 3.8838),cns[n1-1])
+    cns <- c(0.249,0.699,0.451,0.773,0.577,0.823,0.657,0.856,0.712,0.879)
+    cn <- ifelse(n1>11,n1/(n1 + (n1%%2) * 1.515 + (1-n1%%2) * 3.883),cns[n1-1])
     if(n1 != n2) stop('Unequal sample sizes not yet implemented')
     xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
     ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
@@ -367,7 +367,7 @@ qnp <- function(x,y,factor=2.2219){
 snp <- function(x,y,factor=1.1926){
     n1 <- length(x)
     n2 <- length(y)
-    cns <- c(0.982,1.302,0.846,1.137,0.877,1.078,0.899,1.048,0.914,1.032)
+    cns <- c(0.982,1.302,0.846,1.138,0.877,1.078,0.899,1.048,0.914,1.032)
     cn <- ifelse(n1>11,n1/(n1 + (1-n1%%2) * 1.0326 - (n1%%2) * 0.2469),cns[n1-1])
     if(n1 != n2) stop('Unequal sample sizes not yet implemented')
     xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
