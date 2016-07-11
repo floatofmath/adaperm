@@ -1066,3 +1066,145 @@ replicate(1000,{null <- all_combinations(20,10);NULL})
 
 ```
 
+## Robust scale estimates
+
+The normal distribution based unbiased estimate of the variance is
+unreliable as a basis for sample size reassessment when observations
+are not normally distributed. We therefore investigated other
+estimates of scale for the use in sample size reassessment.
+
+We consider 3 robust scale estimates
+1. The median absolute deviation
+2. $S_n$ as suggested in @rousseeuw1993alternatives
+3. $Q_n$ as suggested in @rousseeuw1993alternatives
+
+In a first step we look at the bias and standard deviation of the
+three estimates for a single sample of size between 2 and 20 as well
+as 50 and 100. 
+
+```{r scale_estimates}
+
+library(bt88.03.704)
+options(mc.cores=20)
+library(parallel)
+library(matrixStats)
+
+set.seed('5381')
+est <- list()
+sd <- list()
+
+
+sn <- function(x,factor=1.1926){
+    n <- length(x)
+    factor*sort(matrixStats::rowOrderStats(abs(matrix(x,n,n) - matrix(x,n,n,byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
+}
+qn <- function(x,factor=2.2219){
+    n <- length(x)
+    xm <- abs(matrix(x,n,n) - matrix(x,n,n,byrow=T))
+    factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
+}
+qnp <- function(x,y,factor=2.2219){
+    n1 <- length(x)
+    n2 <- length(x)
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
+    ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
+    factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
+}
+snp <- function(x,y,factor=1.1926){
+    n1 <- length(x)
+    n2 <- length(y)
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
+    ym <- matrixStats::rowOrderStats(abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T)),which=floor(n2/2)+1)
+    factor*sort(c(xm,ym))[n1]
+}
+
+gc()
+B <- 10^6
+
+square <- list()
+for(i in c(2:21,50,51,100,101)){
+    square[[i]] <- rowMeans(replicate2(B,{
+        x <- rnorm(i)
+        y <- rnorm(i)+1
+        c(qn=qn(x)^2,
+          qnp=qnp(x,y)^2,
+          sn=sn(x)^2,
+          snp=snp(x,y)^2,
+          sd = var(x),
+          mad = mad(x)^2,
+          iqr = (IQR(x)/1.349)^2)}))
+}
+
+root <- list()
+for(i in c(2:21,50,51,100,101)){
+    root[[i]] <- rowMeans(replicate2(B,{
+            x <- rnorm(i)
+            y <- rnorm(i)+1
+            c(qn=qn(x),
+              qnp=qnp(x,y),
+              sn=sn(x),
+              snp=snp(x,y),
+              sd = sd(x),
+              mad = mad(x),
+              iqr = (IQR(x)/1.349))}))
+    }
+}
+
+
+save(sim,file=vfile('scale_estim'))
+facs <- do.call(cbind,est)
+effs <- do.call(cbind,sd)
+save(facs,effs,file=vfile('fin_sample_const'))
+## Estimated finite sample efficiencies for qn and sn
+
+load('fin_sample_const_node6_160609.Rd')
+
+efficiencies <- effs[5,]/t(effs[c(1,3,6,7),])
+colnames(efficiencies) <- c(expression(Q(n)),expression(S[n]),'MAD','IQR')
+pander(efficiencies)
+biases <- t(facs[c(1,3,5,6,7),]) - 1
+colnames(biases) <- c(expression(Q(n)),expression(S[n]),'VAR','MAD','IQR')
+pander(round(biases,3))
+## It seems that sn is mor efficient for small sample sizes!
+
+## 
+
+
+
+sfac <- facs[4,]
+qfac <- facs[2,]
+
+plot(2:15,(1+qfac)/qfac)
+plot(2:15,(1+sfac)/sfac)
+
+n1 <- 2:15
+cn <- ifelse(n1%%2<1,
+             -1      - 0.276 * n1,
+             -1.894  - 0.639 * n1)
+
+
+load('facs_mm_node6_160608.Rd')  #facs <- do.call(cbind,est)
+sf <- sqrt(facs[2,])
+
+sfo <- sf[1+2*(1:7)]
+o <- 1+2*(1:7)
+sfe <- sf[2*(1:7)]
+e <- 2*(1:7)
+
+
+
+lm(sfaco ~ 0 + 
+   
+summary(mo <- lm(I(sfo/(1-sfo))~o))
+summary(me <- lm(I(sfe/(1-sfe))~e))
+plot(o,sfo/(1-sfo))
+abline(mo)
+plot(e,sfe/(1-sfe))
+abline(me)
+
+save(facs,file=vfile('facs_mm'))
+
+```
+

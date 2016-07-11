@@ -371,7 +371,7 @@ mean(replicate(10000,{sd <- 1.3
 
 ```
 
-```{r}
+```{r,eval=F}
 robust_pooled_variance <- function(x,y){
     (iqr(c(x-median(x),y-median(y)))/1.349)^2
 }
@@ -565,7 +565,7 @@ run_scenario <- function(scenario){
                'log-gamma'=delta0,
                't4'=delta0,
                'cont'=delta0)[distribution]
-    nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1))
+    nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='qn'))
     
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
@@ -641,14 +641,14 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
                 delta0 = rep(0:1,each=9),
                 sigma0 = rep(rep(c(.6,2.5,1.35),each=3),2))
                 
-## simulate_scenario(scenarios[11,],1000)
+##simulate_scenario(scenarios[11,],1000)
 
 ## run_scenario(scenarios[2,])
 ## run_scenario(scenarios[11,])
 
 out <- list()
-for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=10000))
-for(i in c(10,13,16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1000))
+for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e4))
+for(i in c(10,13,16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e4))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 print(sims,width=Inf)
@@ -673,15 +673,15 @@ since the complete permutation space if often smaller.
 
 ```{r}
 options(dplyr.width=120)
-load('../data/null_simulations_node6_160405.Rd')
+load('~/adaperm_simresults/null_simulations_node6_160405.Rd')
 small_null_50k <- sims
-load('../data/alt_simulations_node2_160405.Rd')
+load('~/adaperm_simresults/alt_simulations_node2_160405.Rd')
 small_alt_50k <- sims
-load('../data/null_simulations_large_node6_160412.Rd')
+load('~/adaperm_simresults/null_simulations_large_node6_160412.Rd')
 large_null_50k <- sims
-load('../data/alt_simulations_large_node6_160419.Rd')
+load('~/adaperm_simresults/alt_simulations_large_node6_160419.Rd')
 large_alt_50k <- sims
-load('../data/simulations_medium_node6_160429.Rd')
+load('~/adaperm_simresults/simulations_medium_node6_160429.Rd')
 medium_null_50k <- sims[1:4,]
 medium_alt_50k <- sims[5:8,]
 ## load('../data/simulations_unstratified_node6_160503.Rd')
@@ -696,6 +696,7 @@ sims <- bind_rows(small_null_50k,
                   medium_alt_50k,
                   large_null_50k,
                   large_alt_50k)
+
 colnames(sims)[12:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W','CER$^r$:W$_\\textrm{mid-p}$')#,'CER:Tu','CER:Wu')
 
 ## pdf('simresults.pdf',height=4,width=7)
@@ -724,7 +725,7 @@ sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
 
 
 
-##devtools::install_github('qrat/plaint')
+## devtools::install_github('qrat/plaint')
 colnames(sims)
 library(plaint)
 
@@ -751,16 +752,16 @@ latex(ftab,options=list(rownames=FALSE),design='design.txt')
 ## Type 1 error
 
 
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(small_null_tab,split.table=3000,digits=3,caption='Simulations of small sample scenarios under the null hypothesis')
 
 ```
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(medium_null_tab,split.table=3000,digits=3,caption='Simulations of medium sample scenarios under the null hypothesis')
 ```
 
 
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(large_null_tab,split.table=3000,digits=3,caption='Simulations of large sample scenarios under the null hypothesis')
 ```
 
@@ -772,7 +773,7 @@ second-stage seems to control the Type I error rate.
 
 ## Power
 
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(small_alt_tab,split.table=3000,digits=3,caption='Simulations of small sample scenarios under the alternative hypothesis')
 ```
 
@@ -796,12 +797,12 @@ combination t-test we gain between 1 percentage point (normally
 distributed observations) and 3 percentage points
 (log-gamma, contaminated normal) in power.
 
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(medium_alt_tab,split.table=3000,digits=3,caption='Simulations of medium sample scenarios under the alternative hypothesis')
 ```
 
 
-```{r,results='markup'}
+```{r ,results='markup'}
 pander(large_alt_tab,split.table=3000,digits=3,caption='Simulations of large sample scenarios under the alternative hypothesis')
 ```
 

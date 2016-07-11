@@ -1,0 +1,700 @@
+---
+title: "Permutation tests for adaptive designs"
+subtitle: "Robust sample size reassessment rules"
+author: Florian Klinglmueller
+output:
+    pdf_document:
+        keep_tex: true
+    rmarkdown::html_vignette: default
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r ,echo=F,results='hide'}
+knitr::opts_chunk$set(eval=FALSE,echo=FALSE,warning=FALSE,results='hide',fig.width=7,fig.height=7,message=FALSE)
+```
+
+
+```{r ,eval=T}
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(microbenchmark)
+library(pander)
+library(parallel)
+library(bt88.03.704)
+library(adaperm)
+#devtools::install_github('floatofmath/adaperm')
+library(ldbounds)
+library(parallel)
+options(mc.cores=detectCores()-1)
+library(matrixStats)
+```
+
+
+## Robust scale estimates
+
+The normal distribution based unbiased estimate of the variance is
+unreliable as a basis for sample size reassessment when observations
+are not normally distributed. We therefore investigated other
+estimates of scale for the use in sample size reassessment.
+
+We consider 4 robust scale estimates
+1. The median absolute deviation
+2. Interquartile range
+3. $S_n$ as suggested in @rousseeuw1993alternatives
+4. $Q_n$ as suggested in @rousseeuw1993alternatives
+
+In a first step we look at the bias and standard deviation of the
+three estimates for a single sample of size between 2 and 20 as well
+as 50 and 100. 
+
+
+## Code to compute $S_n$ and $Q_n$ as well as two sample generalizations
+
+At the moment we use a computationally suboptimal implementation to
+compute $S_n$ and $Q_n$ which requires $O(n^2)$ computations instead
+of the $O(n \log(n))$ required by more effecient algorithms.
+
+We have also implemented the $O(n\log(n))$ of
+@rousseeuw1992computation in native R, however due to the efficiency
+of R's builtin matrix operations the "suboptimal" matrix
+implementation is faster up to sample sizes $n \sim 200$. In addition
+the latter implementation uses only 2-3 lines of code.
+
+```{r ,echo=T,eval=F}
+sn <- function(x,factor=1.1926){
+    n <- length(x)
+    factor*sort(matrixStats::rowOrderStats(abs(matrix(x,n,n) - matrix(x,n,n,byrow=T)),which=floor(n/2)+1))[floor((n+1)/2)]
+}
+qn <- function(x,factor=2.2219){
+    n <- length(x)
+    xm <- abs(matrix(x,n,n) - matrix(x,n,n,byrow=T))
+    factor*sort(xm[upper.tri(xm)])[choose(floor(n/2)+1,2)]
+}
+```
+
+```{r ,echo=F,eval=F}
+    
+## Assumes x,y sorted, length(x) <= length(y)
+overall_median <- function(x,y,lx=1,rx=length(y),ly=1,ry=length(y)){
+    d <- length(y) - length(x)
+    if(d < 0) stop()
+    length <- rx - lx +1
+    even  <- 1 - (length %% 2)
+    half <- floor((length-1)/2)
+    minx <- floor(d/2) 
+    maxx <- floor(d/2) + length(x)
+    imx <- half + lx 
+    imy <- half + ly
+    my <- y[imy]
+    if(imx <= minx){
+        mx <- -Inf
+        ry = imy
+        lx = imx + even
+    } else if(imx > maxx){
+        mx <- Inf
+        rx = imx 
+        ly = imy + even
+    } else {
+        mx <- x[imx - minx]
+        if(mx >= my){
+            rx = imx 
+            ly = imy + even
+        } else {
+            ry = imy
+            lx = imx + even
+        }
+    }
+    if(lx > maxx){
+        return(my)
+    }
+    if(lx >= rx || ly >= ry){
+        return(min(x[lx - minx],y[ly]))
+    }
+    overall_median(x,y,lx,rx,ly,ry)
+}
+
+Sn_fast <- function(x){
+    ## 1. This is only faster for n > 200
+    ## 2. Still has bugs! Does not provide correct result.
+    ai <- function(sx,i,lx,rx,ly,ry,n){
+        d <- ifelse(i <= n/2,
+                    n - 2*i + 1,
+                    2*i - n - 1)
+        if(d < 0) stop()
+        length <- rx - lx +1
+        even  <- 1 - (length %% 2)
+        half <- floor((length-1)/2)
+        minx <- floor(d/2) 
+        maxx <- floor(d/2) + i-1
+        imx <- half + lx 
+        imy <- half + ly
+        my <- ifelse(i <= n/2,
+                     sx[imy + i] - sx[i],
+                     sx[i] - sx[i - imy])
+        if(imx <= minx){
+            mx <- -Inf
+            ry = imy
+            lx = imx + even
+        } else if(imx > maxx){
+            mx <- Inf
+            rx = imx 
+            ly = imy + even
+        } else {
+            mx <- ifelse(n <= n/2,
+                         sx[i] - sx[i - imx + minx],
+                         sx[i + imx - minx] - sx[i])
+            if(mx >= my){
+                rx = imx 
+                ly = imy + even
+            } else {
+                ry = imy
+                lx = imx + even
+            }
+        }
+        if(lx > maxx){
+            ans <- ifelse(i <= n/2,
+                          sx[lx+i]-sx[i],
+                          sx[i] - sx[i - ly])
+            return(ans)
+        }
+        if(lx >= rx || ly >= ry){
+            ans <- ifelse(i <= n/2,
+                          min(sx[i] - sx[i - lx + minx],
+                              sx[ly+i]-sx[i]),
+                          min(sx[i] - sx[i - ly], 
+                              sx[i+ly-minx]-sx[i]))
+            return(ans)
+        }
+        ai(sx,i,lx,rx,ly,ry,n)
+    }
+    sx <- sort(x)
+    n <- length(x)
+    a[1] <- sx[im+1] - sx[1]
+    for(i in 2:10)
+        a[i] <- ai(sx,i,lx=1,rx=n-i-1,ly=1,ry=n-i-1,n=n)
+    return(sort(a)[floor((n+1)/2)+1])
+}    
+
+library(microbenchmark)
+microbenchmark(rnorm(300) %>% sn(),
+               rnorm(300) %>% Sn_fast())
+
+for(i in 1:100){
+    mclapply2(i:100,function(j){
+        if(!all.equal(max({
+            x <- sort(rnorm(i))
+            y <- sort(rnorm(j))
+            abs(overall_median(sort(x),sort(y)) - sort(c(x,y))[floor((length(c(x,y))+1)/2)])}),0))
+            cat('gotcha')
+    },mc.progress=F)
+}
+
+
+```
+
+Due to the computational progress it is feasible to compute $S_n$ and
+$Q_n$ even for large sample sizes. For example in our simulations we
+compute estimates for $10^4$ Monte-Carlo samples with sample sizes up
+to 100 (as shown in the original publication) in a few seconds. On a
+decent multicore computer, even $10^6$ runs finish in a few minutes.
+
+## Estimation from pooled samples
+
+In the orginal article only one sample versions of $S_n$ and $Q_n$ are
+proposed, here we extend the estimates to include the case where the
+scale is to be estimated from two samples with equal scale but
+different location.
+
+These extensions are rather heuristic and based on informal comparison
+with versions that aggregate the per sample estimates using a weighted
+sum. _Before publication this part definitly requires more research
+(literature, comparison of operating characteristics)_
+
+## Finite sample correction factors
+
+
+Even though for normally distributed data asymptotic bias correction
+factors have been derived for all measures, these only ensure
+consistency. For finite samples all measures show quite considerable
+biases. We perform a simulation study with the purpose to estimate the
+correction factor from simulated data. For larger sample sizes we
+estimate the correction factors as a function of sample size which has
+the form $n/(n-c)$, where $c$ may depend on whether $n$ is even or
+odd.
+
+@rousseeuw1992computation perform a similar simulation study - however
+using only a limited number of $2*10^4$ Monte Carlo samples and only
+for the one-sample versions of the scale estimates.
+
+As it turns out the derived correction factors work reasonably
+well. Even though we have not tested them for many different values of
+pooled variance or the mean difference. Also there is no guarantee
+that these estimates work well with other distributions. _This could
+be subject of further research._
+
+
+```{r ,echo=T,eval=F}
+
+qnp <- function(x,y,factor=2.2219){
+    n1 <- length(x)
+    n2 <- length(x)
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
+    ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
+    factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
+}
+
+snp <- function(x,y,factor=1.1926){
+    n1 <- length(x)
+    n2 <- length(y)
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
+    ym <- matrixStats::rowOrderStats(abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T)),which=floor(n2/2)+1)
+    factor*sort(c(xm,ym))[n1]
+}
+
+madp <- function(x,y){
+    mad(c(x-median(x),y-median(y)))
+}
+
+iqrp <- function(x,y){
+    IQR(c(x,-median(x),y-median(y)))/(2*qnorm(3/4))
+}
+
+```
+
+```{r scale_estimates,eval=F}
+set.seed('5381')
+
+
+est <- list()
+sd <- list()
+gc()
+B <- 10^5
+
+squares <- list()
+square <- matrix()        
+
+for(i in c(2:21,50,51,100,101)){
+    squares[[i]] <- rowMeans(
+        square <- replicate2(B,{
+            x <- rnorm(i)
+            y <- rnorm(i)+1
+            c(qnp=qnp(x,y)^2,
+              snp=snp(x,y)^2)}))
+}
+save(square,file=vfile('square'))
+
+
+
+root <- list()
+for(i in c(2:21,50,51,100,101)){
+    root[[i]] <- rowMeans(replicate2(B,{
+            x <- rnorm(i)
+            y <- rnorm(i)+1
+            c(qnp=qnp(x,y),
+              snp=snp(x,y),
+              mad = madp(x,y),
+              iqr = iqrp(x,y))}))
+}
+
+
+save(root,square,file=vfile('uncorrected'))
+
+do.call(cbind,root)
+do.call(cbind,square)
+
+sd.fac <- 1/do.call(cbind,root)
+var.fac <- sqrt(1/do.call(cbind,square))
+
+
+n <- c(2:21,50,51,100,101)
+
+
+fac <- function(n,c){
+    n/(n-c)
+}
+
+rms <- function(c,fs,ns){
+    sqrt(sum((fs - fac(ns,c))^2))
+}
+
+odd <- function(ns,fs=ns){
+    fs[(ns %% 2) == 1]
+}
+even <- function(ns,fs=ns){
+    fs[(ns %% 2) == 0]
+}
+
+whole <- function(ns,fs=ns){
+    fs
+}
+
+
+rms_est <- function(c,what,odds=T,sd=T){
+    data <- switch(sd+1,var.fac,sd.fac)
+    even_odd <- switch(odds+1,even,odd,whole)
+    rms(c,even_odd(n[-(1:9)],data[what,-(1:9)]),even_odd(n[-(1:9)]))
+}
+
+optim(-1,rms_est,what='qn',
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='qn',odds=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='qn',sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='qn',odds=F,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='qnp',
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='qnp',odds=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='qnp',sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='qnp',odds=F,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+
+
+
+optim(-1,rms_est,what='sn',
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='sn',odds=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='sn',sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='sn',odds=F,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='snp',
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='snp',odds=F,
+      method='Brent',lower=-10,upper=10)$par
+
+optim(-1,rms_est,what='snp',sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='snp',odds=F,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+        
+
+optim(-1,rms_est,what='iqr',odds=2,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='iqr',odds=T,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='iqr',odds=F,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+optim(-1,rms_est,what='mad',odds=2,sd=F,
+      method='Brent',lower=-10,upper=10)$par
+
+
+
+
+
+optim(-1,qn_even,method='Brent',lower=-10,upper=10)
+
+optim(-1,qnp_odd,method='Brent',lower=-10,upper=10)
+optim(-1,qnp_even,method='Brent',lower=-10,upper=10)
+
+
+
+
+
+
+plot(i <- seq(-2,2,.001),sapply(i,function(j) rms(j,odd(n,sd.fac[1,]),odd(n))),type='l')
+
+save(facs,effs,file=vfile('fin_sample_const'))
+## Estimated finite sample efficiencies for qn and sn
+
+load('fin_sample_const_node6_160609.Rd')
+
+efficiencies <- effs[5,]/t(effs[c(1,3,6,7),])
+colnames(efficiencies) <- c(expression(Q(n)),expression(S[n]),'MAD','IQR')
+pander(efficiencies)
+biases <- t(facs[c(1,3,5,6,7),]) - 1
+colnames(biases) <- c(expression(Q(n)),expression(S[n]),'VAR','MAD','IQR')
+pander(round(biases,3))
+## It seems that sn is mor efficient for small sample sizes!
+
+## 
+
+
+
+sfac <- facs[4,]
+qfac <- facs[2,]
+
+plot(2:15,(1+qfac)/qfac)
+plot(2:15,(1+sfac)/sfac)
+
+n1 <- 2:15
+cn <- ifelse(n1%%2<1,
+             -1      - 0.276 * n1,
+             -1.894  - 0.639 * n1)
+
+
+load('facs_mm_node6_160608.Rd')  #facs <- do.call(cbind,est)
+sf <- sqrt(facs[2,])
+
+sfo <- sf[1+2*(1:7)]
+o <- 1+2*(1:7)
+sfe <- sf[2*(1:7)]
+e <- 2*(1:7)
+
+
+
+lm(sfaco ~ 0 + 
+   
+summary(mo <- lm(I(sfo/(1-sfo))~o))
+summary(me <- lm(I(sfe/(1-sfe))~e))
+plot(o,sfo/(1-sfo))
+abline(mo)
+plot(e,sfe/(1-sfe))
+abline(me)
+
+save(facs,file=vfile('facs_mm'))
+
+```
+
+```{r updated_estimators}
+qnp <- function(x,y,factor=2.2219){
+    n1 <- length(x)
+    n2 <- length(x)
+    cns <- c(0.249,0.699,0.451,0.771,0.577,0.823,0.657,0.856,0.712,0.879)
+    cn <- ifelse(n1>11,n1/(n1 + (n1%%2) * 1.5157 + (1-n1%%2) * 3.8839),cns[n1-1])
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
+    ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
+    cn*factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
+}
+
+
+snp <- function(x,y,factor=1.1926){
+    n1 <- length(x)
+    n2 <- length(y)
+    cns <- c(0.982,1.302,0.846,1.137,0.877,1.078,0.899,1.048,0.914,1.032)
+    cn <- ifelse(n1>11,n1/(n1 + (1-n1%%2) * 1.0327 - (n1%%2) * 0.2468),cns[n1-1])
+    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    xm <- matrixStats::rowOrderStats(abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T)),which=floor(n1/2)+1)
+    ym <- matrixStats::rowOrderStats(abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T)),which=floor(n2/2)+1)
+    cn*factor*sort(c(xm,ym))[n1]
+}
+
+madp <- function(x,y){
+    n1 <- length(x)
+    cns <- c(1.054,1.429,1.239,1.178,1.167,1.111,1.111,1.080,1.081,1.063)
+    cn <- ifelse(n1>11,n1/(n1 - 0.659),cns[n1-1])
+    cn*mad(c(x-median(x),y-median(y)))
+}
+
+iqrp <- function(x,y){
+    n1 <- length(x)
+    cns <- c(1.186,1.241,1.197,1.173,1.159,1.136,1.129,1.112,1.108,1.097)
+    cn <- ifelse(n1>11,n1/(n1 - 1.046),cns[n1-1])
+    cn*IQR(c(x-median(x),y-median(y)))/(2*qnorm(3/4))
+}
+
+
+
+```
+
+Finite sample bias correction does not work very well for the
+interquartile range. _One could investigate that further. But let's
+leave it at that._ 
+
+
+```{r confirm,eval=F}
+
+B <- 1e6
+confirm <- list()
+ns <- c(2:21,50,51,100,101)
+for(i in ns){
+    confirm[[i]] <- list()
+    out <- replicate2(B,{
+         x <- rnorm(i,sd=2)
+         y <- rnorm(i,sd=2)+1
+         c(qnp=qnp(x,y)^2,
+           snp=snp(x,y)^2,
+           sd = adaperm::pooled_variance(c(x,y),rep(0:1,each=i)),
+           mad = madp(x,y)^2,
+           iqr = iqrp(x,y)^2)})
+     confirm[[i]]$mean <- rowMeans(out)
+     confirm[[i]]$rms <- rowSds(out)
+}
+
+rowMeans(bias <- do.call('cbind',lapply(confirm,`[[`,'mean')) - 4)
+round(bias,2)
+bias <- t(bias)
+round(rms <- do.call('cbind',lapply(confirm,`[[`,'rms')),2)
+rrms <- (t(rms)/rms[3,])
+colnames(rrms) <- rownames(bias)
+library(ggplot2)
+reshape2::melt(rrms,varnames=c('SN','Est')) %>% ggplot(aes(ns[SN],value,colour=Est))+geom_line()+scale_x_log10()
+
+reshape2::melt(bias,varnames=c('SN','Est')) %>%
+    subset(Est!='iqr') %>%
+    ggplot(aes(ns[SN],value,colour=Est))+geom_line()+scale_x_log10()
+
+
+
+rowMeans(replicate2(1000,{
+    x <- rnorm(5)
+    y <- rnorm(5)
+    c(robust_pooled_variance(x,y,type='sn'),
+      adaperm::pooled_variance(c(x,y),rep(0:1,each=5)))}))
+
+
+
+```
+
+# Sample size reassessment using robust scale measures
+
+```{r simulation_code}
+
+run_scenario <- function(scenario){
+    for(i in names(scenario)) assign(i,scenario[[i]])
+    xdist = function(N) {
+        switch(distribution,
+               'normal'=rnorm(N,m=0,sd=parameter),
+               'log-gamma'=log(rgamma(N,1.2))*parameter,
+               't4'=rt(N,4)*parameter,
+               'cont'=rnorm_cont(N,m=0,sd=parameter,cshift=0,csd=3*parameter),
+               'count'=)
+    }
+    ydist = function(N) {
+        switch(distribution,
+               'normal'=rnorm(N,m=delta0,sd=parameter),
+               'log-gamma'=log(rgamma(N,1.2))*parameter+delta0,
+               't4'=rt(N,4)*parameter+delta0,
+               'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
+               'count'=)
+    }
+    x1 <- xdist(n1)
+    y1 <- ydist(n1)
+    delta <- c('normal'=delta0,
+               'log-gamma'=delta0,
+               't4'=delta0,
+               'cont'=delta0)[distribution]
+    nsd <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=F,maxN=6*n1)))
+    nsn <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='sn')))
+    nqn <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='qn')))
+    niqr <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='iqr')))
+    nmad <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='mad')))
+    if(class(nsd)=='try-error'|
+       class(nsn)=='try-error'|
+       class(nqn) =='try-error'|
+       class(niqr)=='try-error'|
+       class(nmad)=='try-error') browser()
+    nE <- max(n,nsd,nsn,niqr,nmad)
+    
+    n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
+    exact  <- n_combs <= 10^5
+    x <- c(x1,xdist(nE-n1))
+    y <- c(y1,ydist(nE-n1))
+    ans <- list(
+        exact=exact,
+        nsd=nsd,
+        nsn=nsn,
+        nqn=nqn,
+        niqr=niqr,
+        nmad=nmad,
+        nE=nE,
+        sd_ivn=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
+        sn_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nsn],y[1:nsn],n1=n1,n=n,ne=nsn),
+        qn_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nqn],y[1:nqn],n1=n1,n=n,ne=nqn),
+        mad_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nmad],y[1:nmad],n1=n1,n=n,ne=nmad),
+        iqr_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:niqr],y[1:niqr],n1=n1,n=n,ne=niqr)
+    )
+    return(ans)
+}
+                                        #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
+
+
+
+simulate_scenario <- function(scenario,B){
+    ans <- mclapply2(1:B,function(i) run_scenario(scenario))
+    ans <- data.table::rbindlist(ans)
+    summarise(ans,B=B,
+                  pExact = mean(exact),
+                  ASNnsd=mean(nsd),
+                  lownsd=quantile(nsd,.175),
+                  hignsd=quantile(nsd,.825),
+                  ASNnsn=mean(nsn),
+                  lownsn=quantile(nsn,.175),
+                  hignsn=quantile(nsn,.825),
+                  ASNnqn=mean(nqn),
+                  lownqn=quantile(nqn,.175),
+                  hignqn=quantile(nqn,.825),
+                  ASNniqr=mean(niqr),
+                  lowniqr=quantile(niqr,.175),
+                  higniqr=quantile(niqr,.825),
+                  ASNnmad=mean(nmad),
+                  lownmad=quantile(nmad,.175),
+                  hignmad=quantile(nmad,.825),
+                  sd_ivn=mean(sd_ivn),
+                  sn_ivn=mean(sn_ivn),
+                  qn_ivn=mean(qn_ivn),
+                  mad_ivn=mean(mad_ivn),
+                  iqr_ivn=mean(iqr_ivn)
+                  )
+}
+
+
+
+```
+
+In a first step we evaluate how well sample size reassessment based on
+the different scale measures control the Type II error rate for
+normally distributed data. 
+
+```{r}
+
+scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
+                n =  rep(c(rep(10,3),rep(100,3),rep(30,3)),2),
+                distribution = rep(rep(c('normal','t4','cont'),3),2),
+                parameter =rep(c(
+                    0.85,0.70,0.65,
+                    2.80,2.10,2.00,
+                    1.55,1.20,1.15),2),
+                delta0 = rep(0:1,each=9),
+                sigma0 = rep(rep(c(.6,2.5,1.35),each=3),2))
+
+run_scenario(scenarios[2,])
+run_scenario(scenarios[11,])
+
+options(mc.cores=38)
+out <- list()
+for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e5))
+sims <- bind_rows(out)
+save(sims,file=vfile('power_tabs'))
+bt88.03.704:::print.tbl_df(sims,width=Inf,round=3)
+library(stringr)
+
+
+melt(sims,id.vars=c(1:8))%>%transform(ASN=grepl('ASN',variable),
+                                       LOW=grepl('low',variable),
+                                       HIG=grepl('hig',variable),
+                                       Power=grepl('ivn',variable),
+                                       method=str_extract(variable,'sd|qn|sn|iqr|mad')) -> df
+
+left_join(subset(df,ASN),subset(df,LOW)[,c('n','method','distribution','value')],by=c('n','method','distribution'))%>%
+    plyr::rename(replace=c('value.x'='asn','value.y'='lown')) %>%
+    left_join(subset(df,HIG)[,c('n','method','distribution','value')],by=c('n','method','distribution')) %>%
+    plyr::rename(replace=c('value'='hign')) %>%
+    left_join(subset(df,Power)[,c('n','method','distribution','value')],by=c('n','method','distribution')) %>%
+    plyr::rename(replace=c('value'='power')) %>%
+    transform(LOW=NULL,HIG=NULL,ASN=NULL,Power=NULL,variable=NULL) -> df
+
+
+
+ggplot(df,aes(method,asn-n))+geom_point()+facet_grid(distribution~n)+geom_errorbar(aes(ymax=hign-n,ymin=lown-n))
+
+ggplot(df,aes(method,power))+geom_point()+facet_wrap(distribution~n)+geom_hline(yintercept=.8)
+
+
+```
