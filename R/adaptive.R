@@ -152,7 +152,7 @@ permutation_cer <- function(x1,x2,
     n1 <- length(x1)
     n <- length(c(x1,x2))
     n2 <- n-n1
-    g2 <- rep(0:1,each=nt2)
+    g2 <- rep(0:1,c(n2-nt2,nt2))
     pdist <- perm_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted,stratified=stratified)
     cdist <- cond_dist(x1,x2,g1,g2,test_statistic,permutations,restricted=restricted,stratified=stratified)
     M <- length(dist)
