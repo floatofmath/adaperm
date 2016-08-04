@@ -520,7 +520,7 @@ cond_power_rule_t_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length
 ##' @author float
 ##' @export
 cond_power_rule_u_ts <- function(x1,y1,target=.9,alpha=0.025,maxN=length(x1)*6){
-    res <- sum(x1 < y1)/(length(x1)*length(y1))
+    res <- sum(sapply(y1,function(y) sum(x1 < y)))/(length(x1)*length(y1))
     nE <- power.u.test(res,length(x1)/(length(x1)+length(y1)),alpha,target,silent=T)
     ceiling(min(maxN,nE))
 }
