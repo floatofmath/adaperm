@@ -301,7 +301,7 @@ power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8,silent=F){
 ##' @author float
 ##' @export
 delta2res <- function(delta,sd=1){
-    pnorm(0,delta,sqrt(2*sd),lower.tail=F)
+    pnorm(0,delta,sqrt(2*sd^2),lower.tail=F)
 }
 
     
