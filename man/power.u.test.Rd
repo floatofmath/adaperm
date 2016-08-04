@@ -4,7 +4,8 @@
 \alias{power.u.test}
 \title{sample size formula for the (one-sided) Mann-Whitney U test}
 \usage{
-power.u.test(res, propn = 1/2, sig.level = 0.025, power = 0.8)
+power.u.test(res, propn = 1/2, sig.level = 0.025, power = 0.8,
+  silent = F)
 }
 \arguments{
 \item{res}{relative effect size, i.e. probability that Y_i > X_i}
@@ -14,6 +15,8 @@ power.u.test(res, propn = 1/2, sig.level = 0.025, power = 0.8)
 \item{sig.level}{significance level}
 
 \item{power}{desired power}
+
+\item{silent}{should explanations be suppressed}
 
 \item{n}{total sample size}
 }

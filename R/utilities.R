@@ -267,10 +267,11 @@ power.z.test <- function(delta,sd,sig.level=.025,power=0.8,
 
 ##' @title sample size formula for the (one-sided) Mann-Whitney U test
 ##' @param res relative effect size, i.e. probability that Y_i > X_i
-##' @param n total sample size
 ##' @param propn proportion of control group samples among total sample
 ##' @param sig.level significance level
 ##' @param power desired power
+##' @param silent should explanations be suppressed
+##' @param n total sample size
 ##' @return sample size (rounded to the next larger integer)
 ##' @author Florian Klinglmueller
 ##' @examples
@@ -280,9 +281,9 @@ power.z.test <- function(delta,sd,sig.level=.025,power=0.8,
 ##' @references
 ##' Noether, Gottfried E. "Sample size determination for some common nonparametric tests." Journal of the American Statistical Association 82.398 (1987): 645-647.
 ##' @export
-power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8){
+power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8,silent=F){
     N = (qnorm(sig.level,lower.tail=F)+qnorm(1-power,lower.tail=F))^2/(12*propn*(1-propn)*(res-1/2)^2)
-    cat("NOTE: n is the number in the *control* group\n")
+    if(!silent) cat("NOTE: n is the number in the *control* group\n")
     ceiling(propn*N)
 }
 
