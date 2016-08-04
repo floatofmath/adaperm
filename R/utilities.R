@@ -265,6 +265,43 @@ power.z.test <- function(delta,sd,sig.level=.025,power=0.8,
     ceiling((sd/delta)^2 * (dfact)^2)
 }
 
+##' @title sample size formula for the (one-sided) Mann-Whitney U test
+##' @param res relative effect size, i.e. probability that Y_i > X_i
+##' @param n total sample size
+##' @param propn proportion of control group samples among total sample
+##' @param sig.level significance level
+##' @param power desired power
+##' @return sample size (rounded to the next larger integer)
+##' @author Florian Klinglmueller
+##' @examples
+##' power.z.test(delta=1,sd=1,power=.84)
+##' power.t.test(delta=1,sd=1,power=.84)
+##' power.u.test(delta2res(delta=1,sd=1),power=.8)
+##' @references
+##' Noether, Gottfried E. "Sample size determination for some common nonparametric tests." Journal of the American Statistical Association 82.398 (1987): 645-647.
+##' @export
+power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8){
+    N = (qnorm(sig.level,lower.tail=F)+qnorm(1-power,lower.tail=F))^2/(12*propn*(1-propn)*(res-1/2)^2)
+    cat("NOTE: n is the number in the *control* group\n")
+    ceiling(propn*N)
+}
+
+##' Convert difference in means to relative effect size for normally distributed samples
+##'
+##' @title Effect size to relative effect size
+##' @param delta difference in means
+##' @param sd common standard deviation
+##' @return probability that observations in the treatment sample are larger than in the control sample
+##' @examples
+##' res <- delta2res(1)
+##' power.u.test(res)
+##' power.z.test(delta=1,sd=1,power=0.84)
+##' power.t.test(delta=1,sd=1,power=0.84)
+##' @author float
+##' @export
+delta2res <- function(delta,sd=1){
+    pnorm(0,delta,sqrt(2*sd),lower.tail=F)
+}
 
     
 ##' Conditional power rule for the one-sample (or paired) z-test using the normal distribution sample size formula. Reestimates the standard deviation from the first stage and recomputes the sample size such that the power to reject the null meets the target power assuming that the mean (paired treatment difference) is equal to a prespecified value.
@@ -342,10 +379,10 @@ qn <- function(x,factor=2.2219){
 ##' @export
 qnp <- function(x,y,factor=2.2219){
     n1 <- length(x)
-    n2 <- length(x)
+    n2 <- length(y)
     cns <- c(0.249,0.699,0.451,0.773,0.577,0.823,0.657,0.856,0.712,0.879)
     cn <- ifelse(n1>11,n1/(n1 + (n1%%2) * 1.515 + (1-n1%%2) * 3.883),cns[n1-1])
-    if(n1 != n2) stop('Unequal sample sizes not yet implemented')
+    if(n1 != n2) warning('Bias correction factor may not be correct for unequal sample sizes')
     xm <- abs(matrix(x,n1,n1) - matrix(x,n1,n1,byrow=T))
     ym <- abs(matrix(y,n2,n2) - matrix(y,n2,n2,byrow=T))
     cn*factor*sort(c(xm[upper.tri(xm)],ym[upper.tri(ym)]))[choose(floor(n1/2)+1,2)+choose(floor(n2/2)+1,2)]
@@ -470,7 +507,22 @@ cond_power_rule_t_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length
     }
     ceiling(min(maxN,nE))
 }
-
+##' Conditional power rule for the Mann-Whitney U test, where we estimate the relative effect size based on the observed first stage outcomes by simply counting the number of treatment group samples that have larger outcome values than control group samples. 
+##'
+##' @title Conditional power sample size reassessment rule (Mann-Whitney U Test)
+##' @param x1 First stage control group observations 
+##' @param y1 First stage treatment group observations
+##' @param target Target power
+##' @param alpha Significance level
+##' @param maxN Maximum sample size
+##' @return Total sample size (in the control group) required to achieve the target power
+##' @author float
+##' @export
+cond_power_rule_u_ts <- function(x1,y1,target=.9,alpha=0.025,maxN=length(x1)*6){
+    res <- sum(x1 < y1)/(length(x1)*length(y1))
+    nE <- power.u.test(res,length(x1)/(length(x1)+length(y1)),alpha,target)
+    ceiling(min(maxN,nE))
+}
 
 ##' Computes the inverse normal combination (sqrt(w1)*qnorm(1-p1) + sqrt(w2)*qnorm(1-p2)) of two (independent) p-values
 ##'
