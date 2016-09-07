@@ -461,7 +461,7 @@ save(facs,file=vfile('facs_mm'))
 
 ```
 
-```{r updated_estimators}
+```{r updated_estimators,eval=F}
 qnp <- function(x,y,factor=2.2219){
     n1 <- length(x)
     n2 <- length(x)
@@ -556,7 +556,7 @@ rowMeans(replicate2(1000,{
 
 ```{r simulation_code}
 
-run_scenario <- function(scenario){
+run_scenario <- function(scenario,ssrs){
     for(i in names(scenario)) assign(i,scenario[[i]])
     xdist = function(N) {
         switch(distribution,
@@ -564,7 +564,7 @@ run_scenario <- function(scenario){
                'log-gamma'=log(rgamma(N,1.2))*parameter,
                't4'=rt(N,4)*parameter,
                'cont'=rnorm_cont(N,m=0,sd=parameter,cshift=0,csd=3*parameter),
-               'count'=)
+               'count'=NULL)
     }
     ydist = function(N) {
         switch(distribution,
@@ -572,77 +572,51 @@ run_scenario <- function(scenario){
                'log-gamma'=log(rgamma(N,1.2))*parameter+delta0,
                't4'=rt(N,4)*parameter+delta0,
                'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
-               'count'=)
+               'count'=NULL)
     }
+    nf <- power.w.test(p1=delta2res(delta0,sigma0,T),propn=1/2,power=0.8,silent=T)
     x1 <- xdist(n1)
     y1 <- ydist(n1)
+    x2 <- xdist(n1)
+    y2 <- ydist(n1)
     delta <- c('normal'=delta0,
                'log-gamma'=delta0,
                't4'=delta0,
                'cont'=delta0)[distribution]
-    nsd <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=F,maxN=6*n1)))
-    nsn <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='sn')))
-    nqn <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='qn')))
-    niqr <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='iqr')))
-    nmad <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='mad')))
-    if(class(nsd)=='try-error'|
-       class(nsn)=='try-error'|
-       class(nqn) =='try-error'|
-       class(niqr)=='try-error'|
-       class(nmad)=='try-error') browser()
-    nE <- max(n,nsd,nsn,niqr,nmad)
-    
+                                        #    nsd <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.84,rob_var=F,maxN=6*n1)))
+    ns <- c(sapply(ssrs,do.call,args=list(x=x1,y=y1,z=c(x2,y2),delta0=scenario$delta0,sigma0=scenario$sigma0)),fixed=nf)
+    ns <- pmax(2*n1,ns)
+    if(any(sapply(ns,class)=='try-error')) browser()
+    nE <- max(ns)
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
-    x <- c(x1,xdist(nE-n1))
-    y <- c(y1,ydist(nE-n1))
-    ans <- list(
-        exact=exact,
-        nsd=nsd,
-        nsn=nsn,
-        nqn=nqn,
-        niqr=niqr,
-        nmad=nmad,
-        nE=nE,
-        sd_ivn=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
-        sn_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nsn],y[1:nsn],n1=n1,n=n,ne=nsn),
-        qn_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nqn],y[1:nqn],n1=n1,n=n,ne=nqn),
-        mad_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:nmad],y[1:nmad],n1=n1,n=n,ne=nmad),
-        iqr_ivn=adaptive_invnorm_wilcoxtest_2s(x[1:niqr],y[1:niqr],n1=n1,n=n,ne=niqr)
-    )
+    x <- c(x1,x2,xdist(nE-2*n1))
+    y <- c(y1,y2,ydist(nE-2*n1))
+    pf <- wilcox.test(y[1:nf],x[1:nf],alternative='greater',correct=F,exact=T)$p.value < 0.025
+    Rs <- c(lapply(head(ns,-1),function(ne) adaptive_invnorm_wilcoxtest_2s(x[1:ne],y[1:ne],n1=n1,n=n,ne=ne)),pf)
+    names(ns) <- paste0('n2_',c(names(ssrs),'fixed'))
+    names(Rs) <- paste0('power_',c(names(ssrs),'fixed'))
+    ans <- c(exact,nE,ns,Rs)
     return(ans)
 }
-                                        #             adaperm_m=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=maritzm,atest_type='davison_hinkley'))
 
 
 
-simulate_scenario <- function(scenario,B){
-    ans <- mclapply2(1:B,function(i) run_scenario(scenario))
+simulate_scenario <- function(ssrs,scenario,B){
+    ans <- mclapply2(1:B,function(i) run_scenario(scenario,ssrs))
     ans <- data.table::rbindlist(ans)
-    summarise(ans,B=B,
-                  pExact = mean(exact),
-                  ASNnsd=mean(nsd),
-                  lownsd=quantile(nsd,.175),
-                  hignsd=quantile(nsd,.825),
-                  ASNnsn=mean(nsn),
-                  lownsn=quantile(nsn,.175),
-                  hignsn=quantile(nsn,.825),
-                  ASNnqn=mean(nqn),
-                  lownqn=quantile(nqn,.175),
-                  hignqn=quantile(nqn,.825),
-                  ASNniqr=mean(niqr),
-                  lowniqr=quantile(niqr,.175),
-                  higniqr=quantile(niqr,.825),
-                  ASNnmad=mean(nmad),
-                  lownmad=quantile(nmad,.175),
-                  hignmad=quantile(nmad,.825),
-                  sd_ivn=mean(sd_ivn),
-                  sn_ivn=mean(sn_ivn),
-                  qn_ivn=mean(qn_ivn),
-                  mad_ivn=mean(mad_ivn),
-                  iqr_ivn=mean(iqr_ivn)
-                  )
+    dots <- c(    dots <- c(B=B,paste0('mean(',names(ans)[grepl('n2',names(ans))],')'),
+                            ##paste0(c('mean(','stats::quantile(','stats::quantile('),rep(names(ans)[grepl('n2',names(ans))],each=3),c(')',',.175)',',.825)')),
+                            paste0('mean(',names(ans)[grepl('power_',names(ans))],')')))
+    names(dots)[grepl('mean\\(n2',dots)] <- gsub('n2_','',paste0('ASN_',names(ans)[grepl('n2',names(ans))]))
+    names(dots)[grepl('.175',dots)] <- gsub('n2_','',paste0('LCL_',names(ans)[grepl('n2',names(ans))]))
+    names(dots)[grepl('.825',dots)] <- gsub('n2_','',paste0('UCL_',names(ans)[grepl('n2',names(ans))]))
+    names(dots)[grepl('power',dots)] <- gsub('power_','',paste0('Power_',names(ans)[grepl('power',names(ans))]))
+    summarise_(ans,.dots=dots)
+    
 }
+
+
 
 
 
@@ -653,29 +627,107 @@ the different scale measures control the Type II error rate for
 normally distributed data. 
 
 ```{r}
-
 scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
                 n =  rep(c(rep(10,3),rep(100,3),rep(30,3)),2),
                 distribution = rep(rep(c('normal','t4','cont'),3),2),
                 parameter =rep(c(
-                    0.85,0.70,0.65,
-                    2.80,2.10,2.00,
-                    1.55,1.20,1.15),2),
+                    0.85,0.70,0.75,
+                    2.80,2.40,2.5,
+                    1.55,1.30,1.4),2),
                 delta0 = rep(0:1,each=9),
-                sigma0 = rep(rep(c(.6,2.5,1.35),each=3),2))
+                sigma0 = rep(rep(c(.85,2.8,1.55),each=3),2))
 
-run_scenario(scenarios[2,])
-run_scenario(scenarios[11,])
+## examples
+pp <- delta2res(.7,higher_order=T)
+cond_power_rule_w_ts(rnorm(5),rnorm(5,.7),c(rnorm(5),rnorm(5,.7)),pp=pp)
+approximate_power_rule_w_ts(rnorm(5),rnorm(5,.7),pp=pp)
+predictive_power_rule_w_ts(rnorm(5),rnorm(5,.7))
+power.z.test(.9,1,power=0.9)
+optimal_power_rule_w_ts(rnorm(5),rnorm(5,1),c(rnorm(5),rnorm(5,1)),pp,lambda=1e-4)
 
-options(mc.cores=38)
+rsssd = function(x,y,z,delta0,sigma0) cond_power_rule_t_ts(x,y,delta=delta0,target=.80,rob_var=F,maxN=6*length(x))
+rsssn = function(x,y,z,delta0,sigma0) cond_power_rule_t_ts(x,y,delta=delta0,target=.80,rob_var=T,type='sn',maxN=6*length(x))
+rsscond = function(x,y,z,delta0,sigma0) cond_power_rule_w_ts(x,y,z,delta2res(delta=delta0,sigma0,T),target=.85,maxN=6*length(x))
+rsspred = function(x,y,z,delta0,sigma0) predictive_power_rule_w_ts(x,y,target=.80,alpha=0.025,maxN=6*length(x))
+rssapprox = function(x,y,z,delta0,sigma0) approximate_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=3e-3,maxN=6*length(x))
+rsscomb = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=3e-3,maxN=6*length(x))
+rssopt = function(x,y,z,delta0,sigma0) optimal_power_rule_w_ts(x,y,z,pp=delta2res(delta=delta0,sigma0,T),lambda=3e-3,maxN=6*length(x))
+
+10 3e-3
+100 1e-4
+
+x <- rnorm(50)
+y <- rnorm(50,1,2.8)
+z <- c(rnorm(50),rnorm(50,1,2.8))
+delta0=1
+sigma0=2.8
+sapply(condpw <- list(rsssd=rsssd,rsssn=rsssn,rsscond=rsscond,rsspred=rsspred,rssop=rssopt,rssapprox=rssapprox,rsscomb=rsscomb),do.call,args=list(x=x,y=y,z=z,delta0=1,sigma0=2.8))
+
+run_scenario(scenarios[14,],ssrs=condpw)
+
+simulate_scenario(scenarios[10,],ssrs=condpw,B=500)
+##run_scenario(scenarios[11,])
+
+options(mc.cores=7)
 out <- list()
-for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e5))
+for(i in c(10:12,16:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],ssrs=condpw,B=1e3))
 sims <- bind_rows(out)
-save(sims,file=vfile('power_tabs'))
+
 bt88.03.704:::print.tbl_df(sims,width=Inf,round=3)
+
+xs <- rnorm(10)
+ys <- rnorm(10,.625)
+sum(sapply(ys,function(y) sum(xs < y)))
+p1 <- sum(outer(ys,xs,FUN=`-`)>0)/100
+
+
+out <- replicate2(1000,{
+    x <- rt(10,4)*.8
+    y <- rt(10,4)*.8
+    unlist(wilcoxon_ps(x,y+1))})
+
+match_ps <- function(n,shift,scale,dist,B=100){
+    rowMeans(replicate2(B,{
+        x <- dist(n)*scale
+        y <- dist(n)*scale
+        unlist(wilcoxon_ps(x,y+shift))}))
+}
+
+
+match_ps(10,1,.7,dist=function(n) rt(n,4),10000)-delta2res(1,0.85,T)
+match_ps(30,1,1.3,dist=function(n) rt(n,4),10000)-delta2res(1,1.55,T)
+match_ps(100,1,2.4,dist=function(n) rt(n,4),10000)-delta2res(1,2.8,T)
+
+
+match_ps(10,1,.75,dist=function(N) rnorm_cont(N,m=0,sd=1,cshift=0,csd=3),10000)-delta2res(1,0.85,T)
+match_ps(30,1,1.4,dist=function(n) rnorm_cont(n,m=0,sd=1,cshift=0,csd=3*1),10000)-delta2res(1,1.55,T)
+match_ps(10,1,2.5,dist=function(n) rnorm_cont(n,m=0,sd=1,cshift=0,csd=3*1),10000)-delta2res(1,2.8,T)
+
+
+
+
+
+
+
+nnorm <- function(d,s,alpha=0.025,beta=.2) {
+    ceiling(2*pi * s^2 * (qnorm(alpha,lower=F)+qnorm(beta,lower=F))^2/ (3*d^2))
+}
+
+power.w.test <- function(p1,p2,p3,alpha,target){
+    pw <- function(n,m,p1,p2,p3,alpha,beta){
+        {sqrt(n*m*(n+m+1)/12) * qnorm(alpha) + (n*m-1)/2 - n*m*p1}/
+            sqrt(n*m*{p1*(1-p1) + (n-1)*(p2-p1^2) + (m-1)*(p3-p1^2)})
+    }
+        
+    
+
+nnorm(1,1)
+power.z.test(1,1,power=.84)
+power.u.test(delta2res(1,1))
+
+
+save(sims,file=vfile('power_tabs'))
 library(stringr)
-
-
 melt(sims,id.vars=c(1:8))%>%transform(ASN=grepl('ASN',variable),
                                        LOW=grepl('low',variable),
                                        HIG=grepl('hig',variable),

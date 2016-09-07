@@ -5,7 +5,8 @@ Authors.R: "Florian Klinglmueller <float@lefant.net> [aut, cre]"
 Description: Resampling and permutation tests for adaptive designs
 Depends:
     R (>= 3.1.2),
-    matrixStats
+    matrixStats,
+    mvtnorm
 Suggests:
     testthat
 Imports: Rcpp

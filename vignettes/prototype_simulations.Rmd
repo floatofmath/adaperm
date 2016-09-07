@@ -26,6 +26,7 @@ library(pander)
 library(parallel)
 library(bt88.03.704)
 ##devtools::install_github('floatofmath/adaperm')
+##devtools::install_github('floatofmath/bt88.03.704')
 ##devtools::install('~/repos/adaperm')
 library(adaperm)
 options(mc.cores=detectCores()-1)
@@ -565,8 +566,8 @@ run_scenario <- function(scenario){
                'log-gamma'=delta0,
                't4'=delta0,
                'cont'=delta0)[distribution]
-    nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.80,rob_var=T,maxN=6*n1,type='qn'))
-    
+                                        #   nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.84,rob_var=T,maxN=6*n1,type='sn'))
+    nE <- max(n,cond_power_rule_u_ts(x1,y1,target=.84,maxN=6*n1))
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
     x <- c(x1,xdist(nE-n1))
@@ -578,7 +579,7 @@ run_scenario <- function(scenario){
         invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE),
         adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
         adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-        adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='randomized',atest_type='midp',permutations=10^5)
+        adaperm_rwp=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5)
     )
     return(ans)
 }
@@ -640,19 +641,29 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
                     1.55,1.20,1.15),2),
                 delta0 = rep(0:1,each=9),
                 sigma0 = rep(rep(c(.6,2.5,1.35),each=3),2))
-                
+
+
 ##simulate_scenario(scenarios[11,],1000)
 
-## run_scenario(scenarios[2,])
-## run_scenario(scenarios[11,])
+small_index <- which(scenarios$n1 == 5)
+medium_index <- which(scenarios$n1 == 15)
+large_index <- which(scenarios$n1 == 50)
 
-out <- list()
-for(i in c(10:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e4))
+small_scenarios <- list()
+medium_scenarios <- list()
+large_scenarios <- list()
+
+for(i in 1:6) small_scenarios[[i]] <- bind_cols(scenarios[small_index[i],],simulate_scenario(scenarios[small_index[i],],B=1e3))
+for(i in 1:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],simulate_scenario(scenarios[medium_index[i],],B=1e4))
+for(i in 1:6) large_scenarios[[i]] <- bind_cols(scenarios[large_index[i],],simulate_scenario(scenarios[large_index[i],],B=1e4))
+
+
+
 for(i in c(10,13,16)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=1e4))
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 print(sims,width=Inf)
-save(sims,file=vfile('~/adaperm_simresults/simulations_newrules'))
+save(small_scenarios,medium_scenarios,large_scenarios,file=vfile('~/adaperm_simresults/simulations_newrules'))
 
 
 

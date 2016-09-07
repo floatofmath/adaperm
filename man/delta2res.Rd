@@ -4,12 +4,14 @@
 \alias{delta2res}
 \title{Effect size to relative effect size}
 \usage{
-delta2res(delta, sd = 1)
+delta2res(delta, sd = 1, higher_order = FALSE)
 }
 \arguments{
 \item{delta}{difference in means}
 
 \item{sd}{common standard deviation}
+
+\item{higher_order}{should higher order probabilities be computed}
 }
 \value{
 probability that observations in the treatment sample are larger than in the control sample

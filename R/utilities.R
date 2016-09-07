@@ -292,6 +292,7 @@ power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8,silent=F){
 ##' @title Effect size to relative effect size
 ##' @param delta difference in means
 ##' @param sd common standard deviation
+##' @param higher_order should higher order probabilities be computed
 ##' @return probability that observations in the treatment sample are larger than in the control sample
 ##' @examples
 ##' res <- delta2res(1)
@@ -300,8 +301,16 @@ power.u.test <- function(res,propn=1/2,sig.level=.025,power=0.8,silent=F){
 ##' power.t.test(delta=1,sd=1,power=0.84)
 ##' @author float
 ##' @export
-delta2res <- function(delta,sd=1){
-    pnorm(0,delta,sqrt(2*sd^2),lower.tail=F)
+delta2res <- function(delta,sd=1,higher_order=FALSE){
+    p1  <- pnorm(0,delta,sqrt(2*sd^2),lower.tail=F)
+    if(higher_order){
+        p2 <- p3 <- mvtnorm::pmvnorm(lower=rep(-Inf,2),
+                                     upper=rep(delta/sqrt(2*sd^2),2),
+                                     mean = rep(0,2),
+                                     corr = matrix(c(1,1/2,1/2,1),nc=2))
+        return(c(p1,p2,p3))
+    }
+    return(p1)
 }
 
     
@@ -520,8 +529,25 @@ cond_power_rule_t_ts <- function(x1,y1,delta=1,target=.9,alpha=0.025,maxN=length
 ##' @author float
 ##' @export
 cond_power_rule_u_ts <- function(x1,y1,target=.9,alpha=0.025,maxN=length(x1)*6){
-    res <- sum(sapply(y1,function(y) sum(x1 < y)))/(length(x1)*length(y1))
-    nE <- power.u.test(res,length(x1)/(length(x1)+length(y1)),alpha,target,silent=T)
+    n1 <- length(x1)
+    m1 <- length(y1)
+    n <- max(n1,m1)
+    p1 <- sum(outer(y1,x1,'-')>0)/(m1*n1)
+    all2dif <- array(-1,rep(n,3))
+    for(i in 1:(m1-1)){
+        for(l in (i+1):m1){
+            for(j in 1:length(n1)){
+                all2dif[i,l,j]  <- (y1[i] - x1[j])*(y1[l]-x1[j])
+            }}}
+    p2 <- sum(all2dif>0)/(m1*(m1-1)/2)*n1
+    for(i in 1:(m1-1)){
+        for(l in (i+1):m1){
+            for(j in 1:length(n1)){
+                all2dif[i,l,j]  <- (y1[i] - x1[j])*(y1[l]-x1[j])
+            }}}
+    p3 <- sum(all2dif>0)/(n1*(n1-1)/2)*m1
+    ## to complete see p.71 in Lehmann - Nonparametrics
+    nE <- power.u.test(p1,m1/(m1+n1),alpha,target,silent=T)
     ceiling(min(maxN,nE))
 }
 
