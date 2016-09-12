@@ -122,9 +122,9 @@ predictive_power_rule_w_ts <- function(x1,y1,m=2*length(x1),target = 0.9,alpha=0
         pnorm({sqrt(n*m*(n+m+1)/12) * qnorm(alpha,lower=F) + (n*m-1)/2 - n*m*p1}/
               sqrt(n*m*{p1*(1-p1) + (n-1)*(p2-p1^2) + (m-1)*(p3-p1^2)}),lower=F)
     }
-    if(pw(m1,p1,p2,p3,alpha,propn)>target) return(m1)
-    if(pw(maxN,p1,p2,p3,alpha,propn)<target) return(maxN)
-    ceiling(bisect(m1,maxN,function(m) pw(m,p1,p2,p3,alpha,propn) >= target,tol=.3))
+    if(power.w.test(m1,p1=ps,sig.level=alpha,propn=propn)>target) return(m1)
+    if(power.w.test(maxN,p1=ps,sig.level=alpha,propn=propn)<target) return(maxN)
+    power.w.test(p1=ps,sig.level=alpha,propn=propn,power=target)
 }
 
 
@@ -134,18 +134,10 @@ approximate_power_rule_w_ts <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,al
     m1 <- length(x1)
     m2 <- m - m1
     ps <- order_probabilities(x1,y1)
-    pw <- function(m,p1,p2,p3,alpha,r){
-        n <- m/r
-        pnorm({sqrt(n*m*(n+m+1)/12) * qnorm(alpha,lower=F) + (n*m-1)/2 - n*m*p1}/
-              sqrt(n*m*{p1*(1-p1) + (n-1)*(p2-p1^2) + (m-1)*(p3-p1^2)}),lower=F)
-    }
-    CP <- function(nA,lambda=0) {
-        pc <- lapply(1:3,function(i) {(m1*ps[[i]] + (m2+nA)*pp[[i]])/(m1+m2+nA)})
-        pw(m1+m2+nA,pc[[1]],pc[[2]],pc[[3]],alpha,propn) - lambda*nA
-    }
-    cp <- CP(0:(maxN-(m1+m2)),lambda)
+    nA <- 0:(maxN-(m1+m2))
+    pc <- lapply(1:3,function(i) {(m1*ps[[i]] + (m2+nA)*pp[[i]])/(m1+m2+nA)})
+    cp <- power.w.test(m2+nA,p1=pc,sig.level=alpha,propn=propn) - lambda * 0:(maxN-(m1+m2))
     mA <- which.max(cp)-1
-    cpOpt <- CP(mA+1,0)
     return(c(m1+m2+mA))
 }
 
@@ -154,16 +146,9 @@ approximate_power_rule_w_ts <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,al
 combination_power_rule_w_ts <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,alpha=0.025,maxN=length(x1)*6,propn=1/2){
     m1 <- length(x1)
     m2 <- m - m1
-    A <- pnorm({qnorm(alpha,lower=F) - sqrt(m1/m)*qnorm(wilcox.test(y1,x1,alternative='greater')$p.value,lower=F)}/sqrt(1-m1/m))
-    pw <- function(m,p1,p2,p3,alpha,r){
-        n <- m/r
-        pnorm({sqrt(n*m*(n+m+1)/12) * qnorm(alpha,lower=F) + (n*m-1)/2 - n*m*p1}/
-              sqrt(n*m*{p1*(1-p1) + (n-1)*(p2-p1^2) + (m-1)*(p3-p1^2)}),lower=F)
-    }
-    CP <- function(nA,lambda=0) pw(m2+nA,pp[[1]],pp[[2]],pp[[3]],A,propn) - lambda*nA
-    cp <- CP(0:(maxN-(m1+m2)),lambda)
+    A <- pnorm({qnorm(alpha,lower=F) - sqrt(m1/m)*qnorm(wilcox.test(y1,x1,alternative='greater')$p.value,lower=F)}/sqrt(1-m1/m),lower=F)
+    cp <- power.w.test(m2+0:(maxN-(m1+m2)),p1=pp,sig.level=A,propn=propn) - lambda * 0:(maxN-(m1+m2))
     mA <- which.max(cp)-1
-    cpOpt <- CP(mA+1,0)
     return(c(m1+m2+mA))
 }
 
@@ -174,14 +159,12 @@ optimal_power_rule_w_ts <- function(x1,y1,z2,pp,lambda = 1e-4,alpha=0.025,maxN=l
     m2 <- length(z2)*propn
     n2 <- length(z2) - m2
     A <- permutation_cer(c(x1,y1),z2,rep(0:1,c(length(x1),length(y1))),nt2=n2,test_statistic=ranksum,permutations=10000,alpha=0.025,restricted=TRUE,cer_type='randomized',stratified=TRUE)
-    pw <- function(m,p1,p2,p3,alpha,r){
-        n <- m/r
-        pnorm({sqrt(n*m*(n+m+1)/12) * qnorm(alpha,lower=F) + (n*m-1)/2 - n*m*p1}/
-              sqrt(n*m*{p1*(1-p1) + (n-1)*(p2-p1^2) + (m-1)*(p3-p1^2)}),lower=F)
-    }
-    CP <- function(nA,lambda=0) pw(m2+nA,pp[[1]],pp[[2]],pp[[3]],A,propn) - lambda*nA
-    cp <- CP(0:(maxN-(m1+m2)),lambda)
+    nA <- 0:(maxN-(m1+m2))
+    cp <- power.w.test(m2+nA,p1=pp,sig.level=A,propn=propn) - lambda*nA
     mA <- which.max(cp)-1
-    cpOpt <- CP(mA+1,0)
     return(c(m1+m2+mA))
 }
+
+
+
+    
