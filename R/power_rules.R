@@ -184,7 +184,7 @@ lambda.model <- lm(unlist(lambda[n1s])~log(sqrt(n1s)))
 ##' @seealso \code{\link{optimal_power_rule_w_ts}}, \code{\link{combination_power_rule_w_ts}} and  \code{\link{approximate_power_rule_w_ts}} for sample size rules based on a combined objective (maximum conditional power with moderate small sample size)
 ##' @export
 ##' @author float
-n2gamma <- function(n1,target=.8){
+n2lambda <- function(n1,target=.8){
     if(target != .8) stop('Any other target than 80% power is not yet supported')
     if(n1 > length(lambda) || is.null(lambda[[n1]])){
         return(predict(lambda.model,newdata=list(n1s=n1)))
