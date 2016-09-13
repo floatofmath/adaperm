@@ -26,7 +26,7 @@ library(pander)
 library(parallel)
 library(bt88.03.704)
 library(adaperm)
-#devtools::install_github('floatofmath/adaperm')
+#devtools::install_github('floatofmath/adaperm')    
 library(ldbounds)
 library(parallel)
 options(mc.cores=detectCores()-1)
@@ -653,10 +653,10 @@ rssapprox = function(x,y,z,delta0,sigma0) approximate_power_rule_w_ts(x,y,pp=del
 
 
 
-rsscomb1 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=.10/(4*sigma0^2),maxN=6*length(x))
-rsscomb2 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=.12/(4*sigma0^2),maxN=6*length(x))
-rsscomb3 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=.13/(4*sigma0^2),maxN=6*length(x))
-rsscomb4 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=0.3-(.007*length(x))/(4*sigma0^2),maxN=6*length(x))
+rsscomb1 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=345e-4,maxN=6*length(x))
+rsscomb2 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=125e-4,maxN=6*length(x))
+rsscomb3 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=395e-5,maxN=6*length(x))
+
 
 
 
@@ -671,11 +671,11 @@ z <- c(rnorm(50),rnorm(50,1,2.8))
 delta0=1
 sigma0=2.8
 ##rsspred=rsspred,rssop=rssopt,rssapprox=rssapprox,rsscomb=rsscomb
-sapply(condpw <- list(rsssd=rsssd,rsssn=rsssn,rsscond=rsscond,rsscomb1=rsscomb1,rsscomb2=rsscomb2,rsscomb3=rsscomb3,rsscomb4=rsscomb4),do.call,args=list(x=x,y=y,z=z,delta0=1,sigma0=2.8))
+sapply(condpw <- list(rsssd=rsssd,rsssn=rsssn,rsscond=rsscond,rsscomb1=rsscomb1,rsscomb2=rsscomb2,rsscomb3=rsscomb3),do.call,args=list(x=x,y=y,z=z,delta0=1,sigma0=2.8))
 
 options(mc.cores=39)
 out <- list()
-for(i in c(10,12,13,14,16,18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],ssrs=condpw,B=1e4))
+for(i in c(10,12,16,18,13,15)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],ssrs=condpw,B=1e5))
 sims <- bind_rows(out)
 bt88.03.704:::print.tbl_df(sims,width=Inf,round=3)
 

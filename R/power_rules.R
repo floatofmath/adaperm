@@ -165,6 +165,31 @@ optimal_power_rule_w_ts <- function(x1,y1,z2,pp,lambda = 1e-4,alpha=0.025,maxN=l
     return(c(m1+m2+mA))
 }
 
+lambda <- list()
+lambda[[5]] <- 345e-4
+lambda[[15]] <- 125e-4
+lambda[[50]] <- 395e-5
 
+n1s <- which(!sapply(lambda,is.null))
+lambda.model <- lm(unlist(lambda[n1s])~log(sqrt(n1s)))
+
+##' Estimate the penalty factor lambda from n1, in a way to give roughly 80% overall power
+##'
+##' Except for first stage sample sizes 5, 15 and 50 this may give totally useless results.
+##'
+##' @title n1 to lambda
+##' @param n1 first stage control group sample size
+##' @param target target power
+##' @return penalty factor for the combined sample size objective
+##' @seealso \code{\link{optimal_power_rule_w_ts}}, \code{\link{combination_power_rule_w_ts}} and  \code{\link{approximate_power_rule_w_ts}} for sample size rules based on a combined objective (maximum conditional power with moderate small sample size)
+##' @export
+##' @author float
+n2gamma <- function(n1,target=.8){
+    if(target != .8) stop('Any other target than 80% power is not yet supported')
+    if(n1 > length(lambda) || is.null(lambda[[n1]])){
+        return(predict(lambda.model,newdata=list(n1s=n1)))
+    }
+    lambda[[n1]]
+}
 
     
