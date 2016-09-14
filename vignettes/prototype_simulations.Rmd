@@ -558,8 +558,8 @@ run_scenario <- function(scenario){
                'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
                'count'=NULL)
     }
-    m1 <- n1*(1-propn)/propn
-    m <- n*(1-propn)/propn
+    m1 <- ceiling(n1*(1-propn)/propn)
+    m <- ceiling(n*(1-propn)/propn)
     x1 <- xdist(n1)
     y1 <- ydist(m1)
     delta <- c('normal'=delta0,
@@ -568,19 +568,19 @@ run_scenario <- function(scenario){
                'cont'=delta0)[distribution]
                                        #   nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.84,rob_var=T,maxN=6*n1,type='sn'))
     nE <- combination_power_rule_w_ts(x1,y1,pp=delta2res(delta=delta0,sigma0,T),lambda=lambda,maxN=6*length(x),propn=propn)
-    mE <- nE*(1-propn)/propn
+    mE <- ceiling(nE*(1-propn)/propn)
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
     x <- c(x1,xdist(nE-n1))
-    y <- c(y1,ydist(mE))
+    y <- c(y1,ydist(mE-m1))
     ans <- data_frame(
         exact=exact,
         nE=nE,
         invnorm_t=adaptive_invnormtest_2s(x,y,n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
         invnorm_w=adaptive_invnorm_wilcoxtest_2s(x,y,n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
-        adaperm_t=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,m1=m1,m=m,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-        adaperm_rw=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-        adaperm_w=adaperm_DR(c(x,y),rep(0:1,each=nE),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5)
+        adaperm_t=adaperm_DR(c(x,y),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
+        adaperm_rw=adaperm_DR(c(x,y),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
+        adaperm_w=adaperm_DR(c(x,y),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5)
     )
     return(ans)
 }
@@ -632,7 +632,7 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3),rep(10,3)),2),
 small_index <- which(scenarios$n1 == 5)
 medium_index <- which(scenarios$n1 == 15)
 large_index <- which(scenarios$n1 == 50)
-example_index <- which(scenarios$n1 == 50)
+example_index <- which(scenarios$n1 == 10)
 
 small_scenarios <- list()
 medium_scenarios <- list()
