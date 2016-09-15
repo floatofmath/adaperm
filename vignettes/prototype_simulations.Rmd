@@ -623,7 +623,7 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3),rep(10,3)),2),
                     3,2.5,2.7),2),
                 delta0 = c(rep(0,12),rep(1,9),rep(2,3)),
                 sigma0 = rep(rep(c(.80,2.6,1.5,3),each=3),2),
-                lambda = rep(c(rep(450e-4,3),rep(550e-5,3),rep(170e-4,3),rep(130e-4,3)),2),
+                lambda = rep(c(rep(450e-4,3),rep(550e-5,3),rep(155e-4,3),rep(145e-4,3)),2),
                 propn = rep(c(rep(1/2,9),rep(1/3,3)),2))
 
 
@@ -647,11 +647,17 @@ for(i in 1:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],sim
 
 for(i in 1:6) large_scenarios[[i]] <- bind_cols(scenarios[large_index[i],],simulate_scenario(scenarios[large_index[i],],B=1e4))
 
+for(i in 1:6) example_scenarios[[i]] <- bind_cols(scenarios[example_index[i],],simulate_scenario(scenarios[example_index[i],],B=1e4))
+
 
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
 print(sims,width=Inf)
-save(small_scenarios,file=vfile('~/adaperm_simresults/simulations_newrules'))
+save(small_scenarios,file=vfile('~/adaperm_simresults/small_simulations_newrules'))
+save(medium_scenarios,file=vfile('~/adaperm_simresults/medium_simulations_newrules'))
+save(large_scenarios,file=vfile('~/adaperm_simresults/large_simulations_newrules'))
+save(example_scenarios,file=vfile('~/adaperm_simresults/example_simulations_newrules'))
+
 
 
 
