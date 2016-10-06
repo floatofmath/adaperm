@@ -555,7 +555,6 @@ rowMeans(replicate2(1000,{
 # Sample size reassessment using robust scale measures
 
 ```{r simulation_code}
-
 run_scenario <- function(scenario,ssrs){
     for(i in names(scenario)) assign(i,scenario[[i]])
     xdist = function(N) {
@@ -568,10 +567,10 @@ run_scenario <- function(scenario,ssrs){
     }
     ydist = function(N) {
         switch(distribution,
-               'normal'=rnorm(N,m=delta0,sd=parameter),
-               'log-gamma'=log(rgamma(N,1.2))*parameter+delta0,
-               't4'=rt(N,4)*parameter+delta0,
-               'cont'=rnorm_cont(N,m=delta0,sd=parameter,cshift=0,csd=3*parameter),
+               'normal'=rnorm(N,m=delta,sd=parameter),
+               'log-gamma'=log(rgamma(N,1.2))*parameter+delta,
+               't4'=rt(N,4)*parameter+delta,
+               'cont'=rnorm_cont(N,m=delta,sd=parameter,cshift=0,csd=3*parameter),
                'count'=NULL)
     }
     nf <- power.w.test(p1=delta2res(delta0,sigma0,T),propn=1/2,power=0.8,silent=T)
@@ -579,11 +578,11 @@ run_scenario <- function(scenario,ssrs){
     y1 <- ydist(n1)
     x2 <- xdist(n1)
     y2 <- ydist(n1)
-    delta <- c('normal'=delta0,
-               'log-gamma'=delta0,
-               't4'=delta0,
-               'cont'=delta0)[distribution]
-                                        #    nsd <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.84,rob_var=F,maxN=6*n1)))
+    ## delta0s <- c('normal'=delta0,
+    ##            'log-gamma'=delta0,
+    ##            't4'=delta0,
+    ##            'cont'=delta0)[distribution]
+    ## nsd <- try(max(n,cond_power_rule_t_ts(x1,y1,delta=1,target=.84,rob_var=F,maxN=6*n1)))
     ns <- c(sapply(ssrs,do.call,args=list(x=x1,y=y1,z=c(x2,y2),delta0=scenario$delta0,sigma0=scenario$sigma0)),fixed=nf)
     ns <- pmax(2*n1,ns)
     if(any(sapply(ns,class)=='try-error')) browser()
@@ -592,7 +591,9 @@ run_scenario <- function(scenario,ssrs){
     exact  <- n_combs <= 10^5
     x <- c(x1,x2,xdist(nE-2*n1))
     y <- c(y1,y2,ydist(nE-2*n1))
+    ## perform fixed sample test
     pf <- wilcox.test(y[1:nf],x[1:nf],alternative='greater',correct=F,exact=T)$p.value < 0.025
+    ## perform adaptive tests
     Rs <- c(lapply(head(ns,-1),function(ne) adaptive_invnorm_wilcoxtest_2s(x[1:ne],y[1:ne],n1=n1,n=n,ne=ne)),pf)
     names(ns) <- paste0('n2_',c(names(ssrs),'fixed'))
     names(Rs) <- paste0('power_',c(names(ssrs),'fixed'))
@@ -601,16 +602,18 @@ run_scenario <- function(scenario,ssrs){
 }
 
 
-
 simulate_scenario <- function(ssrs,scenario,B){
     ans <- mclapply2(1:B,function(i) run_scenario(scenario,ssrs))
     ans <- data.table::rbindlist(ans)
-    dots <- c(    dots <- c(B=B,paste0('mean(',names(ans)[grepl('n2',names(ans))],')'),
-                            ##paste0(c('mean(','stats::quantile(','stats::quantile('),rep(names(ans)[grepl('n2',names(ans))],each=3),c(')',',.175)',',.825)')),
-                            paste0('mean(',names(ans)[grepl('power_',names(ans))],')')))
+    dots <- c(B=B,
+              paste0('mean(',names(ans)[grepl('n2',names(ans))],')'),
+              paste0('max(',names(ans)[grepl('n2',names(ans))],')'),
+              ##paste0(c('mean(','stats::quantile(','stats::quantile('),rep(names(ans)[grepl('n2',names(ans))],each=3),c(')',',.175)',',.825)')),
+              paste0('mean(',names(ans)[grepl('power_',names(ans))],')'))
     names(dots)[grepl('mean\\(n2',dots)] <- gsub('n2_','',paste0('ASN_',names(ans)[grepl('n2',names(ans))]))
     names(dots)[grepl('.175',dots)] <- gsub('n2_','',paste0('LCL_',names(ans)[grepl('n2',names(ans))]))
     names(dots)[grepl('.825',dots)] <- gsub('n2_','',paste0('UCL_',names(ans)[grepl('n2',names(ans))]))
+    names(dots)[grepl('max\\(n2',dots)] <- gsub('n2_','',paste0('MAX_',names(ans)[grepl('n2',names(ans))]))
     names(dots)[grepl('power',dots)] <- gsub('power_','',paste0('Power_',names(ans)[grepl('power',names(ans))]))
     summarise_(ans,.dots=dots)
     
@@ -626,25 +629,8 @@ In a first step we evaluate how well sample size reassessment based on
 the different scale measures control the Type II error rate for
 normally distributed data. 
 
+
 ```{r}
-scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3)),2),
-                n =  rep(c(rep(10,3),rep(100,3),rep(30,3)),2),
-                distribution = rep(rep(c('normal','t4','cont'),3),2),
-                parameter =rep(c(
-                    0.80,0.65,0.70,
-                    2.6,2.20,2.3,
-                    1.45,1.20,1.3),2),
-                delta0 = rep(0:1,each=9),
-                sigma0 = rep(rep(c(.80,2.6,1.45),each=3),2))
-
-## examples
-pp <- delta2res(.7,higher_order=T)
-cond_power_rule_w_ts(rnorm(5),rnorm(5,.7),c(rnorm(5),rnorm(5,.7)),pp=pp)
-approximate_power_rule_w_ts(rnorm(5),rnorm(5,.7),pp=pp)
-predictive_power_rule_w_ts(rnorm(5),rnorm(5,.7))
-power.z.test(.9,1,power=0.9)
-combination_power_rule_w_ts(rnorm(15),rnorm(15,1/1.55),pp=pp,lambda=1e-2)
-
 rsssd = function(x,y,z,delta0,sigma0) cond_power_rule_t_ts(x,y,delta=delta0,target=.84,rob_var=F,maxN=6*length(x))
 rsssn = function(x,y,z,delta0,sigma0) cond_power_rule_t_ts(x,y,delta=delta0,target=.84,rob_var=T,type='sn',maxN=6*length(x))
 rsscond = function(x,y,z,delta0,sigma0) cond_power_rule_w_ts(x,y,z,delta2res(delta=delta0,sigma0,T),target=.85,maxN=6*length(x))
@@ -652,12 +638,63 @@ rsspred = function(x,y,z,delta0,sigma0) predictive_power_rule_w_ts(x,y,target=.8
 rssapprox = function(x,y,z,delta0,sigma0) approximate_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=(0.15-0.1/length(x))/(4*sigma0^2),maxN=6*length(x))
 
 
+### what we use
+rsscomb1 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=450e-4,maxN=6*length(x))
+rsscomb2 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=150e-4,maxN=6*length(x))
+rsscomb3 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=570e-5,maxN=6*length(x))
+rsscomb4 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=560e-5,maxN=6*length(x))
+rsscomb5 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=540e-5,maxN=6*length(x))
 
-rsscomb1 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=490e-5,maxN=6*length(x))
-rsscomb2 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=550e-5,maxN=6*length(x))
-rsscomb3 = function(x,y,z,delta0,sigma0) combination_power_rule_w_ts(x,y,pp=delta2res(delta=delta0,sigma0,T),lambda=520e-5,maxN=6*length(x))
+
+
 rssopt = function(x,y,z,delta0,sigma0) optimal_power_rule_w_ts(x,y,z,pp=delta2res(delta=delta0,sigma0,T),lambda=(0.1-0.1/length(x))/(4*sigma0^2),maxN=6*length(x))
 
+
+```
+
+
+```{r}
+
+drule <- function(n,A,lambda=540e-5,delta=1,sigma=2.8) {
+    sqrt(2/n)*dnorm(qnorm(A,lower=F) - delta*sqrt(n/2)/sigma)*delta/sigma - 2*lambda
+}
+
+lapply(seq(0.001,0.05,.001),function(a) try(uniroot(drule,A=a,lambda=550e-5,lower=100,upper=200)$root))
+
+
+```
+
+
+```{r}
+scenarios <- data.frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3),rep(10,3)),2),
+                n =  rep(c(rep(10,3),rep(100,3),rep(30,3),rep(20,3)),2),
+                distribution = rep(rep(c('normal','t4','cont'),4),2),
+                parameter =rep(c(
+                    0.80,0.65,0.70,
+                    2.6,2.20,2.3,
+                    1.5,1.25,1.35,
+                    3,2.5,2.7),2),
+                delta = c(rep(0,12),rep(1,9),rep(2,3)),
+                delta0 = rep(c(rep(1,9),rep(2,3)),2),
+                sigma0 = rep(rep(c(.80,2.6,1.5,3),each=3),2),
+                lambda = rep(c(rep(450e-4,3),rep(570e-5,3),rep(150e-4,3),rep(180e-4,3)),2),
+                propn = rep(c(rep(1/2,9),rep(1/3,3)),2))
+
+## examples
+pp <- delta2res(.7,higher_order=T)
+cond_power_rule_w_ts(rnorm(5),rnorm(5,.7),c(rnorm(5),rnorm(5,.7)),pp=pp)
+approximate_power_rule_w_ts(rnorm(5),rnorm(5,.7),pp=pp)
+predictive_power_rule_w_ts(rnorm(5),rnorm(5,.7))
+power.z.test(.9,1,power=0.9)
+combination_power_rule_w_ts(rnorm(50),rnorm(50,.1),pp=pp,lambda=0,maxN=1000)
+run_scenario(scenarios[4,],'rsscomb3')
+run_scenario(scenarios[4,],'rsscomb4')
+
+
+
+deriv(y~(sqrt((m/r - m) * m * ((m/r - m) + m + 1)/12) * za + ((m/r - m) * m - 1)/2 - (m/r - m) * m * p1)/sqrt((m/r - m) * m * (p1 * (1 - p1) + ((m/r - m) - 1) * (p2 - p1^2) + (m - 1) * (p3 - p1^2))),'m')
+                                                                                                     
+plot(570e-5*
 ## 10 3e-3
 ## 100 1e-4
 
@@ -671,8 +708,8 @@ sigma0=2.8
 
 options(mc.cores=39)
 out <- list()
-sapply(condpw <- list(rsssd=rsssd,rsssn=rsssn,rsscond=rsscond,rsscomb1=rsscomb1,rsscomb2=rsscomb2,rsscomb3=rsscomb3),do.call,args=list(x=x,y=y,z=z,delta0=1,sigma0=2.8))
-for(i in c(13)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],ssrs=condpw,B=1e4))
+sapply(condpw <- list(rsscomb1=rsscomb3,rsscomb2=rsscomb4,rsscomb3=rsscomb5),do.call,args=list(x=x,y=y,z=z,delta0=1,sigma0=2.8))
+for(i in c(4:6,16:18)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],ssrs=condpw,B=1e3))
 sims <- bind_rows(out)
 bt88.03.704:::print.tbl_df(sims,width=Inf,round=3)
 
