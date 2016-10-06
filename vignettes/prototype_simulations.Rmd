@@ -681,31 +681,33 @@ since the complete permutation space if often smaller.
 
 ```{r}
 options(dplyr.width=120)
-load('~/adaperm_simresults/null_simulations_node6_160405.Rd')
-small_null_50k <- sims
-load('~/adaperm_simresults/alt_simulations_node2_160405.Rd')
-small_alt_50k <- sims
-load('~/adaperm_simresults/null_simulations_large_node6_160412.Rd')
-large_null_50k <- sims
-load('~/adaperm_simresults/alt_simulations_large_node6_160419.Rd')
-large_alt_50k <- sims
-load('~/adaperm_simresults/simulations_medium_node6_160429.Rd')
-medium_null_50k <- sims[1:4,]
-medium_alt_50k <- sims[5:8,]
-## load('../data/simulations_unstratified_node6_160503.Rd')
+load('~/srv-home/adaperm_simresults/small_simulations_newrules_node2_160929.Rd')
+load('~/srv-home/adaperm_simresults/medium_simulations_newrules_node2_160929.Rd')
+load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_160929.Rd')
+
+
+## small_null_50k <- sims
+## load('~/srv-home/adaperm_simresults/alt_simulations_node2_160405.Rd')
+## small_alt_50k <- sims
+## load('~/srv-home/adaperm_simresults/null_simulations_large_node6_160412.Rd')
+## large_null_50k <- sims
+## load('~/srv-home/adaperm_simresults/alt_simulations_large_node6_160419.Rd')
+## large_alt_50k <- sims
+## load('~/srv-home/adaperm_simresults/simulations_medium_node6_160429.Rd')
+## medium_null_50k <- sims[1:4,]
+## medium_alt_50k <- sims[5:8,]
+## ## load('../data/simulations_unstratified_node6_160503.Rd')
 ## small_null_50k <- sims[1:4,]
 ## small_alt_50k <- sims[9:12,]
 ## medium_null_50k <- sims[5:8,]
 ## medium_alt_50k <- sims[13:16,]
 
-sims <- bind_rows(small_null_50k,
-                  small_alt_50k,
-                  medium_null_50k,
-                  medium_alt_50k,
-                  large_null_50k,
-                  large_alt_50k)
+sims <- bind_rows(small_scenarios,
+                  medium_scenarios,
+                  large_scenarios)
 
-colnames(sims)[12:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W','CER$^r$:W$_\\textrm{mid-p}$')#,'CER:Tu','CER:Wu')
+
+colnames(sims)[14:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W')#,'CER$^r$:W$_\\textrm{mid-p}$')#,'CER:Tu','CER:Wu')
 
 ## pdf('simresults.pdf',height=4,width=7)
 ## sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
@@ -733,7 +735,7 @@ sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
 
 
 
-## devtools::install_github('qrat/plaint')
+##devtools::install_github('qrat/plaint')
 colnames(sims)
 library(plaint)
 

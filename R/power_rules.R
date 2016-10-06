@@ -170,8 +170,15 @@ lambda[[5]] <- 345e-4
 lambda[[15]] <- 125e-4
 lambda[[50]] <- 395e-5
 
-n1s <- which(!sapply(lambda,is.null))
-lambda.model <- lm(unlist(lambda[n1s])~log(sqrt(n1s)))
+lambdas <- c(345e-4,125e-4,395e-5,450e-4,160e-4,550e-5)
+sigmas <- c(0.85,1.55,2.8,0.8,1.5,2.6)
+n1s <- c(5,15,50,5,15,50)
+lambda.model <- lm(log(lambdas)~sigmas+n1s)
+lambdas.fit <- exp(-1.8 - 1.9 * sigmas + 0.03 * n1s)
+
+## exp(predict(lambda.model,newdata=list(sigmas=1.5,n1s=15)))
+## plot(lambdas,lambdas.fit,xlim=c(0,.05),ylim=c(0,.05))
+## abline(0,1)
 
 ##' Estimate the penalty factor lambda from n1, in a way to give roughly 80% overall power
 ##'
@@ -184,12 +191,12 @@ lambda.model <- lm(unlist(lambda[n1s])~log(sqrt(n1s)))
 ##' @seealso \code{\link{optimal_power_rule_w_ts}}, \code{\link{combination_power_rule_w_ts}} and  \code{\link{approximate_power_rule_w_ts}} for sample size rules based on a combined objective (maximum conditional power with moderate small sample size)
 ##' @export
 ##' @author float
-n2lambda <- function(n1,target=.8){
+n2lambda <- function(n1,sigma,target=.8){
     if(target != .8) stop('Any other target than 80% power is not yet supported')
-    if(n1 > length(lambda) || is.null(lambda[[n1]])){
-        return(predict(lambda.model,newdata=list(n1s=n1)))
+    if(!(n1 %in% n1s && sigma %in% sigmas)){
+        return(predict(lambda.model,newdata=list(n1s=n1,sigmas=sigma)))
     }
-    lambda[[n1]]
+    lambdas[which(n1s %in% n1&sigmas %in% sigma)]
 }
 
     
