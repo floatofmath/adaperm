@@ -690,9 +690,9 @@ since the complete permutation space if often smaller.
 
 ```{r}
 options(dplyr.width=120)
-load('~/srv-home/adaperm_simresults/small_simulations_newrules_node2_160929.Rd')
-load('~/srv-home/adaperm_simresults/medium_simulations_newrules_node2_160929.Rd')
-load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_161004.Rd')
+load('~/srv-home/adaperm_simresults/small_simulations_newrules_node6_161006.Rd')
+load('~/srv-home/adaperm_simresults/medium_simulations_newrules_node6_161006.Rd')
+load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_161007.Rd')
 
 
 ## small_null_50k <- sims
@@ -714,9 +714,15 @@ load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_161004.Rd')
 sims <- bind_rows(small_scenarios,
                   medium_scenarios,
                   large_scenarios)
+colnames(sims) <- gsub("adaperm","ce",colnames(sims))
+colnames(sims) <- gsub("invnorm","ct",colnames(sims))
+colnames(sims) <- gsub("fixedN","fsN",colnames(sims))
+colnames(sims) <- gsub("fixed_w","fs:W",colnames(sims))
+colnames(sims) <- gsub("_t",":T",colnames(sims))
+colnames(sims) <- gsub("_w",":W",colnames(sims))
+colnames(sims) <- gsub("_rw","$^r$:W",colnames(sims))
 
 
-colnames(sims)[14:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W')#,'CER$^r$:W$_\\textrm{mid-p}$')#,'CER:Tu','CER:Wu')
 
 ## pdf('simresults.pdf',height=4,width=7)
 ## sims %>% mutate(distribution = relevel(factor(distribution),'normal')) %>%
@@ -726,17 +732,12 @@ colnames(sims)[14:ncol(sims)] <- c('CT:T','CT:W','CER:T','CER:W','CER$^r$:W')#,'
 
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0==0 & n1==5) %>% dcast(distribution~Test,value.var='Power') -> small_null_tab
-
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==5) %>% dcast(distribution~Test,value.var='Power') -> small_alt_tab
-
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0==0 & n1==15) %>% dcast(distribution~Test,value.var='Power') -> medium_null_tab
-
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0>0 & n1==15) %>% dcast(distribution~Test,value.var='Power') -> medium_alt_tab
-
-
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
     subset(delta0==0 & n1==50) %>% dcast(distribution~Test,value.var='Power') -> large_null_tab
 sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
@@ -748,24 +749,28 @@ sims %>% melt(.,id.vars=1:11,value.name='Power',variable.name='Test') %>%
 colnames(sims)
 library(plaint)
 dists <-  c("normal" = 1,"t4" = 2, "cont" = 3)
-simtab <- sims[,-c(1,4,8:9,10,12)]
-simtab[,8:12] <- simtab[,8:12] * 100
-simtab <- simtab[with(simtab,order(dists[distribution],n,delta0)),]
+simtab <- sims[,-c(1,4,6,9:10,11,13)]
+simtab[,9:14] <- simtab[,9:14] * 100
+simtab <- simtab[with(simtab,order(dists[distribution],n,delta)),]
 #rownames(simtab) <- paste(simtab$distribution,1:nrow(simtab))
-simtab %<>% mutate(distribution=c("cont" = "Cont.","log-gamma" = "log-$\\gamma$","normal" = "Normal","t4" = "t$_4$"," " = " ")[distribution])
+simtab %<>% mutate(distribution=c("cont" = "Cont.","log-gamma" = "log-$\\gamma$","normal" = "Normal","t4" = "t$_4$"," " = " ")[distribution]) %>% as.data.frame
 ftab <- form(simtab[,c(3,4,1,2,5,7,6,8:ncol(simtab))],formatcolumn = list(
-                                                          "%1i" = "delta0",
+                                                          "%1i" = "delta",
                                                           "%1.1f" = "sigma0",
-                                                          "%1i" = "B",
                                                           "%3i" = "n",
                                                           "%3i" = "MSN",
+                                                          "%3i" = "fsN",
                                                           "%3.1f" = "ASN",
-                                                          "%2.1f" = "C*"))
+                                                          "%1.3f" = 'lambda',
+                                                          "%2.1f" = "c*"
+                                                          ))
 #             marker=list("v=='1'" = "delta0"),
                                         #             symbol=list("**" = "==")
+ftab <- within(ftab,n  <- factor(n,levels=c(' 10',' 30','100'),ordered=T))
 ftab %<>%
-    group_by(delta0,n) %>% do(within(.,{ #distribution[duplicated(distribution)] <- ' '
-        delta0[duplicated(delta0)] <- ' '
+    group_by(delta,n) %>% do(within(.,{ #distribution[duplicated(distribution)] <- ' '
+        delta[duplicated(delta)] <- ' '
+        n <- as.character(n)
         n[duplicated(n)] <- ' '
         sigma0[duplicated(sigma0)] <- ' '
         lambda[duplicated(lambda)] <- ' '
