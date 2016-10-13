@@ -210,7 +210,7 @@ pooled_variance <- function(x,g){
         x1[g<=0] <- NA
         x2 <- x * (g<=0)
         x2[g>0] <- NA
-        ((n1-1)*colVars(x1,na.rm=T)+(n1-1)*colVars(x2,na.rm=T))/(n1+n2-2)
+        ((n1-1)*colVars(x1,na.rm=T)+(n2-1)*colVars(x2,na.rm=T))/(n1+n2-2)
     } else if(is.matrix(x)){
         n1 <- sum(g>0)
         n2 <- sum(g<=0)
