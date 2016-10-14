@@ -583,9 +583,9 @@ run_scenario <- function(scenario){
         nf=nf,
         nE=nE,
         fixed_w = wilcox.test(y[1:nf],x[1:nf],alternative='greater',correct=F,exact=T)$p.value < 0.025,
-        invnorm_t=adaptive_invnormtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
+        #invnorm_t=adaptive_invnormtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
         invnorm_w=adaptive_invnorm_wilcoxtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
-        adaperm_t=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
+        #adaperm_t=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
         adaperm_rw=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
         adaperm_w=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5)
     )
@@ -606,9 +606,9 @@ simulate_scenario <- function(scenario,B){
               fixed_w = mean(fixed_w),
 #                  fixed_t = mean(fixed_t),
 #                  fixed_w = mean(fixed_w),
-                  invnorm_t=mean(invnorm_t),
+                  #invnorm_t=mean(invnorm_t),
                   invnorm_w=mean(invnorm_w),
-                  adaperm_t=mean(adaperm_t),
+                  #adaperm_t=mean(adaperm_t),
                   adaperm_w=mean(adaperm_w),
                   adaperm_rw=mean(adaperm_rw)
 #                  adaperm_rwp=mean(adaperm_rwp)
@@ -627,12 +627,12 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3),rep(10,3)),2),
                 parameter =rep(c(
                     0.80,0.65,0.70,
                     2.6,2.20,2.3,
-                    1.4,1.2,1.3,
+                    1.4,1.2,1.2,
                     3,2.5,2.7),2),
                 delta = c(rep(0,12),rep(1,9),rep(2,3)),
                 delta0 = rep(c(rep(1,9),rep(2,3)),2),
                 sigma0 = rep(rep(c(.80,2.6,1.4,3),each=3),2),
-                lambda = rep(c(rep(460e-4,3),rep(570e-5,3),rep(160e-4,3),rep(180e-4,3)),2),
+                lambda = rep(c(rep(470e-4,3),rep(580e-5,3),rep(160e-4,3),rep(180e-4,3)),2),
                 propn = rep(c(rep(1/2,9),rep(1/3,3)),2))
 
 
@@ -653,7 +653,7 @@ for(i in 1:6) small_scenarios[[i]] <- bind_cols(scenarios[small_index[i],],simul
 save(small_scenarios,file=vfile('~/adaperm_simresults/small_simulations_newrules'))
 
 ## about 3.5h for 1e4
-for(i in 4:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],simulate_scenario(scenarios[medium_index[i],],B=1e4))
+for(i in 4:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],simulate_scenario(scenarios[medium_index[i],],B=1e3))
 save(medium_scenarios,file=vfile('~/adaperm_simresults/medium_simulations_newrules'))
 
 for(i in 1:6) large_scenarios[[i]] <- bind_cols(scenarios[large_index[i],],simulate_scenario(scenarios[large_index[i],],B=1e3))
@@ -690,9 +690,9 @@ since the complete permutation space if often smaller.
 
 ```{r}
 options(dplyr.width=120)
-load('~/srv-home/adaperm_simresults/small_simulations_newrules_node6_161006.Rd')
-load('~/srv-home/adaperm_simresults/medium_simulations_newrules_node6_161006.Rd')
-load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_161007.Rd')
+load('~/adaperm_simresults/small_simulations_newrules_node6_161006.Rd')
+load('~/adaperm_simresults/medium_simulations_newrules_node6_161006.Rd')
+load('~/adaperm_simresults/large_simulations_newrules_node6_161007.Rd')
 
 
 ## small_null_50k <- sims
@@ -778,7 +778,8 @@ ftab %<>%
         MSN[duplicated(MSN)] <- ' '
     }))
 ftab[10,1] <- "\\\\\\hline\\\\ 1"
-latex(ftab,options=list(rownames=FALSE),design='design.txt',file="~/repos/ovl_adaperm/table.tex")
+ftab <- ftab[,!grepl("T$",colnames(ftab))]
+latex(ftab,options=list(rownames=FALSE),design='design.txt',file="table.tex")
 
 
 ```
