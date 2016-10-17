@@ -139,7 +139,7 @@ adaperm  <- function(x,g=NULL,n1,n,m1=n1,m=n,test_statistic,alpha0=NULL,alpha=.0
                              atest_type=atest_type,
                              cer_type=cer_type,
                              stratified=stratified)
-     pval <- bisect(0,1,decf,tol=10^-6)
+     pval <- bisect(0,1,decf,tol=1e-5)
     } else {
         pval <- drp(xs[[1]],xs[[2]],xs[[3]],
                                         gs[[1]],gs[[2]],gs[[3]],
