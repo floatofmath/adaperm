@@ -152,6 +152,18 @@ combination_power_rule_w_ts <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,al
     return(c(m1+m2+mA))
 }
 
+##' @describeIn SSR_WMW Efficient power rule for the WMW test using the combination test conditional power
+##' @export combination_power_rule_w_ts
+combination_power_rule_w_ts_f <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,alpha=0.025,maxN=length(x1)*6,propn=1/2,futility=0.8){
+    m1 <- length(x1)
+    m2 <- m - m1
+    A <- pnorm({qnorm(alpha,lower=F) - sqrt(m1/m)*qnorm(wilcox.test(y1,x1,alternative='greater')$p.value,lower=F)}/sqrt(1-m1/m),lower=F)
+    cp <- power.w.test(m2+0:(maxN-(m1+m2)),p1=pp,sig.level=A,propn=propn) - lambda * 0:(maxN-(m1+m2))
+    mA <- which.max(cp)-1
+    if(max(cp+lambda * 0:(maxN - (m1 + m2)))<=futility) return(NULL)
+    return(c(m1+m2+mA))
+}
+
 ##' @describeIn SSR_WMW Efficient power rule for the WMW test using the conditional power of a second stage WMW test
 ##' @export optimal_power_rule_w_ts
 optimal_power_rule_w_ts <- function(x1,y1,z2,pp,lambda = 1e-4,alpha=0.025,maxN=length(x1)*6,propn=1/2){
