@@ -160,7 +160,7 @@ combination_power_rule_w_ts_f <- function(x1,y1,m=2*length(x1),pp,lambda = 1e-4,
     A <- pnorm({qnorm(alpha,lower=F) - sqrt(m1/m)*qnorm(wilcox.test(y1,x1,alternative='greater')$p.value,lower=F)}/sqrt(1-m1/m),lower=F)
     cp <- power.w.test(m2+0:(maxN-(m1+m2)),p1=pp,sig.level=A,propn=propn) - lambda * 0:(maxN-(m1+m2))
     mA <- which.max(cp)-1
-    if(cp[1]<=0) return(NULL)
+    if(max(cp+lambda * 0:(maxN - (m1 + m2)))<=futility) return(NULL)
     return(c(m1+m2+mA))
 }
 

@@ -652,7 +652,7 @@ large_scenarios <- list()
 example_scenarios <- list()
 
 ## about 1h for 1e4
-for(i in 1:6) small_scenarios[[i]] <- bind_cols(scenarios[small_index[i],],simulate_scenario(scenarios[small_index[i],],B=1e4))
+for(i in 1:6) small_scenarios[[i]] <- bind_cols(scenarios[small_index[i],],simulate_scenario(scenarios[small_index[i],],B=1e3))
 print(bind_rows(small_scenarios),width=Inf)
 
 save(small_scenarios,file=vfile('~/adaperm_simresults/small_simulations_futility'))
