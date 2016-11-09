@@ -690,9 +690,9 @@ since the complete permutation space if often smaller.
 
 ```{r}
 options(dplyr.width=120)
-load('~/adaperm_simresults/small_simulations_newrules_node6_161006.Rd')
-load('~/adaperm_simresults/medium_simulations_newrules_node6_161006.Rd')
-load('~/adaperm_simresults/large_simulations_newrules_node6_161007.Rd')
+load('~/srv-home/adaperm_simresults/small_simulations_newrules_node6_161018.Rd')
+load('~/srv-home/adaperm_simresults/medium_simulations_newrules_node6_161018.Rd')
+load('~/srv-home/adaperm_simresults/large_simulations_newrules_node6_161007.Rd')
 
 
 ## small_null_50k <- sims
@@ -779,7 +779,7 @@ ftab %<>%
     }))
 ftab[10,1] <- "\\\\\\hline\\\\ 1"
 ftab <- ftab[,!grepl("T$",colnames(ftab))]
-latex(ftab,options=list(rownames=FALSE),design='design.txt',file="table.tex")
+latex(ftab,options=list(rownames=FALSE),design='design.txt',file="~/repos/ovl_adaperm/table.tex")
 
 
 ```
