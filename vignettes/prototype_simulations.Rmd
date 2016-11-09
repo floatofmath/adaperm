@@ -570,7 +570,8 @@ run_scenario <- function(scenario){
     ##            't4'=delta,
     ##            'cont'=delta)[distribution]
     ##   nE <- max(n,cond_power_rule_norm_ts(x1,y1,delta=1,target=.84,rob_var=T,maxN=6*n1,type='sn'))
-    nE <- combination_power_rule_w_ts(x1,y1,pp=delta2res(delta=delta0,sigma0,T),lambda=lambda,maxN=6*n1,propn=propn)
+    nAdapt <- combination_power_rule_w_ts_f(x1,y1,pp=delta2res(delta=delta0,sigma0,T),lambda=lambda,maxN=6*n1,propn=propn)
+    nE <- ifelse(is.null(nAdapt),n,nAdapt)
     mE <- ceiling(nE*(1-propn)/propn)
     n_combs <- choose(2*n1,n1)*choose(2*(n-n1),(n-n1))
     exact  <- n_combs <= 10^5
@@ -581,13 +582,14 @@ run_scenario <- function(scenario){
     ans <- data_frame(
         exact=exact,
         nf=nf,
-        nE=nE,
+        fs=is.null(nAdapt),
+        nE=ifelse(is.null(nAdapt),n1,nE),
         fixed_w = wilcox.test(y[1:nf],x[1:nf],alternative='greater',correct=F,exact=T)$p.value < 0.025,
         #invnorm_t=adaptive_invnormtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
-        invnorm_w=adaptive_invnorm_wilcoxtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE),
+        invnorm_w=ifelse(is.null(nAdapt),FALSE,adaptive_invnorm_wilcoxtest_2s(x[1:nE],y[1:mE],n1=n1,n=n,ne=nE,m1=m1,m=m,me=mE)),
         #adaperm_t=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=tstat,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-        adaperm_rw=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5),
-        adaperm_w=adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5)
+        adaperm_rw=ifelse(is.null(nAdapt),FALSE,adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='randomized',atest_type='non-randomized',permutations=10^5)),
+        adaperm_w=ifelse(is.null(nAdapt),FALSE,adaperm_DR(c(x[1:nE],y[1:mE]),rep(0:1,c(nE,mE)),n1=n1,n=n,m1=m1,m=m,test=ranksum,cer_type='non-randomized',atest_type='non-randomized',permutations=10^5))
     )
     return(ans)
 }
@@ -602,6 +604,7 @@ simulate_scenario <- function(scenario,B){
                   ASN = mean(nE),
                   sdSN = sd(nE),
                   MSN = max(nE),
+              futilS = mean(fs),
               fixedN = mean(nf),
               fixed_w = mean(fixed_w),
 #                  fixed_t = mean(fixed_t),
@@ -627,12 +630,12 @@ scenarios <- data_frame(n1 = rep(c(rep(5,3),rep(50,3),rep(15,3),rep(10,3)),2),
                 parameter =rep(c(
                     0.80,0.65,0.70,
                     2.6,2.20,2.3,
-                    1.4,1.2,1.2,
+                    1.5,1.28,1.32,
                     3,2.5,2.7),2),
                 delta = c(rep(0,12),rep(1,9),rep(2,3)),
                 delta0 = rep(c(rep(1,9),rep(2,3)),2),
-                sigma0 = rep(rep(c(.80,2.6,1.4,3),each=3),2),
-                lambda = rep(c(rep(470e-4,3),rep(580e-5,3),rep(160e-4,3),rep(180e-4,3)),2),
+                sigma0 = rep(rep(c(.80,2.6,1.5,3),each=3),2),
+                lambda = rep(c(rep(550e-4,3),rep(550e-5,3),rep(140e-4,3),rep(180e-4,3)),2),
                 propn = rep(c(rep(1/2,9),rep(1/3,3)),2))
 
 
@@ -650,17 +653,21 @@ example_scenarios <- list()
 
 ## about 1h for 1e4
 for(i in 1:6) small_scenarios[[i]] <- bind_cols(scenarios[small_index[i],],simulate_scenario(scenarios[small_index[i],],B=1e4))
-save(small_scenarios,file=vfile('~/adaperm_simresults/small_simulations_newrules'))
+print(bind_rows(small_scenarios),width=Inf)
+
+save(small_scenarios,file=vfile('~/adaperm_simresults/small_simulations_futility'))
 
 ## about 3.5h for 1e4
-for(i in 4:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],simulate_scenario(scenarios[medium_index[i],],B=1e3))
-save(medium_scenarios,file=vfile('~/adaperm_simresults/medium_simulations_newrules'))
+for(i in 1:6) medium_scenarios[[i]] <- bind_cols(scenarios[medium_index[i],],simulate_scenario(scenarios[medium_index[i],],B=1e4))
+print(bind_rows(medium_scenarios),width=Inf)
+save(medium_scenarios,file=vfile('~/adaperm_simresults/medium_simulations_futility'))
 
-for(i in 1:6) large_scenarios[[i]] <- bind_cols(scenarios[large_index[i],],simulate_scenario(scenarios[large_index[i],],B=1e3))
-save(large_scenarios,file=vfile('~/adaperm_simresults/large_simulations_newrules'))
+for(i in 1:6) large_scenarios[[i]] <- bind_cols(scenarios[large_index[i],],simulate_scenario(scenarios[large_index[i],],B=1e4))
+print(bind_rows(large_scenarios),width=Inf)
+save(large_scenarios,file=vfile('~/adaperm_simresults/large_simulations_futility'))
 
 for(i in 1:6) example_scenarios[[i]] <- bind_cols(scenarios[example_index[i],],simulate_scenario(scenarios[example_index[i],],B=1e3))
-save(example_scenarios,file=vfile('~/adaperm_simresults/example_simulations_newrules'))
+save(example_scenarios,file=vfile('~/adaperm_simresults/example_simulations_futility'))
 
 sims <- bind_rows(out)
 #for(i in 1:nrow(scenarios)) out[[i]] <- bind_cols(scenarios[i,],simulate_scenario(scenarios[i,],B=20000))
@@ -750,7 +757,7 @@ colnames(sims)
 library(plaint)
 dists <-  c("normal" = 1,"t4" = 2, "cont" = 3)
 simtab <- sims[,-c(1,4,6,9:10,11,13)]
-simtab[,9:14] <- simtab[,9:14] * 100
+simtab[,c(8,10:13)] <- simtab[,c(8,10:13)] * 100
 simtab <- simtab[with(simtab,order(dists[distribution],n,delta)),]
 #rownames(simtab) <- paste(simtab$distribution,1:nrow(simtab))
 simtab %<>% mutate(distribution=c("cont" = "Cont.","log-gamma" = "log-$\\gamma$","normal" = "Normal","t4" = "t$_4$"," " = " ")[distribution]) %>% as.data.frame
@@ -761,6 +768,7 @@ ftab <- form(simtab[,c(3,4,1,2,5,7,6,8:ncol(simtab))],formatcolumn = list(
                                                           "%3i" = "MSN",
                                                           "%3i" = "fsN",
                                                           "%3.1f" = "ASN",
+                                                          "%2.1f" = "futilS",
                                                           "%1.3f" = 'lambda',
                                                           "%2.1f" = "c*"
                                                           ))
